@@ -7,7 +7,7 @@ import random
 st.set_page_config(
     page_title="VIBE CHECK : 라이프 올인원",
     page_icon="⚡",
-    layout="wide"  # 좌우 분할을 위해 wide 레이아웃 사용
+    layout="wide"
 )
 
 # 2. MZ 감성 & 좌우 분할 냉장고 내부 테마 CSS
@@ -273,18 +273,23 @@ else:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- [1] 냉장고 파먹기 (좌우 냉장실/냉동실 + 종류별 상중하 분류) ---
+    # --- [1] 냉장고 파먹기 ---
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
         st.caption("냉장실과 냉동실을 좌우로 분리하여 한눈에 심플하게 관리하세요!")
 
-        # 데이터 구조 정제
+        # 데이터 구조 정제 (이모지 중복 방지를 위해 이름에서 이모지 제거)
+        import re
         cleaned = []
         for item in st.session_state.fridge_items:
-            name = item.get("name", "음식")
+            raw_name = item.get("name", "음식")
+            # 이름에 포함된 이모지나 특수문자 제거 정제
+            clean_name = re.sub(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]', '', raw_name).strip()
+            if not clean_name:
+                clean_name = "음식"
             cleaned.append({
-                "name": name,
+                "name": clean_name,
                 "type": item.get("type", "냉장실"),
                 "qty": item.get("qty", 1),
                 "days": item.get("days", 3)
@@ -305,7 +310,7 @@ else:
             
             submitted = st.form_submit_button("📥 재료 등록하기", use_container_width=True)
             if submitted and new_item.strip():
-                clean_name = new_item.strip()
+                clean_name = re.sub(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]', '', new_item).strip()
                 st.session_state.fridge_items.append({
                     "name": clean_name,
                     "type": loc_type,
@@ -317,14 +322,11 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        # 데이터 분류 함수
         def render_shelves(compartment_type):
             items = [i for i in st.session_state.fridge_items if i["type"] == compartment_type]
             
-            # 종류별 분류
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
             cat2 = [i for i in items if get_food_category(i["name"]) == "유제품/반찬"]
             cat3 = [i for i in items if get_food_category(i["name"]) == "육류/해산물/냉동식품"]
