@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. MZ 감성 & 좌우 분할 냉장고 내부 테마 CSS (초간결 심플 디자인)
+# 2. 전반적인 MZ 감성 다크 테마 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -92,90 +92,21 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.25) !important;
     }
 
-    /* 냉장고 패널 스타일 */
-    .fridge-panel {
-        background: linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 100%);
-        border: 6px solid #cfd8dc;
-        border-radius: 24px;
-        padding: 16px;
-        color: #102a43;
-        min-height: 480px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    /* 냉장고/냉동실 박스 스타일 */
+    .fridge-box {
+        background: rgba(224, 247, 250, 0.1);
+        border: 3px solid #80deea;
+        border-radius: 20px;
+        padding: 20px;
+        color: #ffffff;
     }
-
-    .freezer-panel {
-        background: linear-gradient(180deg, #eceff1 0%, #cfd8dc 100%);
-        border: 6px solid #b0bec5;
-        border-radius: 24px;
-        padding: 16px;
-        color: #102a43;
-        min-height: 480px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    .freezer-box {
+        background: rgba(236, 237, 238, 0.1);
+        border: 3px solid #b0bec5;
+        border-radius: 20px;
+        padding: 20px;
+        color: #ffffff;
     }
-
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 900;
-        margin-bottom: 12px;
-        text-align: center;
-        padding: 8px;
-        border-radius: 12px;
-        background: rgba(255,255,255,0.8);
-    }
-
-    .mini-shelf {
-        background: rgba(255, 255, 255, 0.75);
-        border-bottom: 4px solid #80deea;
-        border-radius: 12px;
-        padding: 10px 14px;
-        margin-bottom: 12px;
-    }
-
-    .mini-shelf-freezer {
-        background: rgba(255, 255, 255, 0.75);
-        border-bottom: 4px solid #90a4ae;
-        border-radius: 12px;
-        padding: 10px 14px;
-        margin-bottom: 12px;
-    }
-
-    .shelf-category {
-        font-size: 0.75rem;
-        font-weight: 800;
-        color: #37474f;
-        margin-bottom: 6px;
-        display: block;
-    }
-
-    .simple-food-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    /* 초간단 심플 푸드 칩 */
-    .food-tag {
-        background: #ffffff;
-        border: 1px solid #b0bec5;
-        border-radius: 10px;
-        padding: 5px 10px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #263238;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    }
-
-    .d-day-tag {
-        font-size: 0.65rem;
-        padding: 2px 5px;
-        border-radius: 6px;
-        font-weight: 800;
-    }
-    .badge-urgent { background: #ffebee; color: #c62828; }
-    .badge-safe { background: #e0f2f1; color: #00695c; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -208,7 +139,7 @@ def get_food_category(name):
     else:
         return "채소/과일/기타"
 
-# 5. 세션 상태 초기화 (초기값 빈 리스트로 설정하여 텅 빈 상태로 시작)
+# 5. 세션 상태 초기화 (완전 텅 빈 상태로 시작)
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
@@ -264,22 +195,7 @@ else:
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
-        st.caption("냉장실과 냉동실을 좌우로 분리하여 한눈에 심플하게 관리하세요!")
-
-        # 데이터 정제
-        cleaned = []
-        for item in st.session_state.fridge_items:
-            raw_name = item.get("name", "음식")
-            clean_name = re.sub(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]', '', raw_name).strip()
-            if not clean_name:
-                clean_name = "음식"
-            cleaned.append({
-                "name": clean_name,
-                "type": item.get("type", "냉장실"),
-                "qty": item.get("qty", 1),
-                "days": item.get("days", 5)
-            })
-        st.session_state.fridge_items = cleaned
+        st.caption("식재료를 입력하면 냉장실과 냉동실의 선반별로 깔끔하게 정리됩니다.")
 
         # 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -302,68 +218,50 @@ else:
                     "qty": new_qty,
                     "days": new_expired
                 })
-                st.toast(f"'{clean_name}' 등록 완료!", icon="✨")
+                st.success(f"'{clean_name}' 등록 완료!")
                 st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def render_shelves(compartment_type):
-            items = [i for i in st.session_state.fridge_items if i["type"] == compartment_type]
+        def render_section(comp_type):
+            items = [i for i in st.session_state.fridge_items if i["type"] == comp_type]
             
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
             cat2 = [i for i in items if get_food_category(i["name"]) == "유제품/반찬"]
             cat3 = [i for i in items if get_food_category(i["name"]) == "육류/해산물/냉동식품"]
 
-            def make_tags(lst):
+            st.markdown(f"### {'❄️ 냉장실 (3°C)' if comp_type == '냉장실' else '🧊 냉동실 (-18°C)'}")
+            
+            def show_list(lst):
                 if not lst:
-                    return "<span style='color:#78909c; font-size:0.75rem;'>비어있음 🍃</span>"
-                res = ""
+                    st.caption("비어있음 🍃")
+                    return
                 for it in lst:
                     emoji = get_food_emoji(it["name"])
-                    badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
-                    # 중복 이모지 없이 딱 1개 아이콘 + 이름 + 수량으로 깔끔하게 출력
-                    res += f"""
-                    <div class="food-tag">
-                        <span>{emoji} {it['name']} ({it['qty']}개)</span>
-                        <span class="d-day-tag {badge_class}">D-{it['days']}</span>
-                    </div>
-                    """
-                return res
+                    d_tag = f"🔴 D-{it['days']}" if it["days"] <= 3 else f"🟢 D-{it['days']}"
+                    st.markdown(f"- {emoji} **{it['name']}** ({it['qty']}개) &nbsp; `{d_tag}`")
 
-            shelf_class = "mini-shelf" if compartment_type == "냉장실" else "mini-shelf-freezer"
-
-            return f"""
-            <div class="{shelf_class}">
-                <span class="shelf-category">🥗 상단 : 채소 · 과일 · 신선칸</span>
-                <div class="simple-food-list">{make_tags(cat1)}</div>
-            </div>
-            <div class="{shelf_class}">
-                <span class="shelf-category">🧀 중단 : 유제품 · 반찬 · 소스류</span>
-                <div class="simple-food-list">{make_tags(cat2)}</div>
-            </div>
-            <div class="{shelf_class}" style="margin-bottom:0;">
-                <span class="shelf-category">🥩 하단 : 육류 · 해산물 · 가공식품</span>
-                <div class="simple-food-list">{make_tags(cat3)}</div>
-            </div>
-            """
+            st.markdown("##### 🥗 상단: 채소 · 과일")
+            show_list(cat1)
+            st.markdown("##### 🧀 중단: 유제품 · 반찬")
+            show_list(cat2)
+            st.markdown("##### 🥩 하단: 육류 · 가공식품")
+            show_list(cat3)
 
         with col_fridge:
-            st.markdown(f"""
-            <div class="fridge-panel">
-                <div class="section-title">❄️ 냉장실 (3°C)</div>
-                {render_shelves("냉장실")}
-            </div>
-            """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<div class="fridge-box">', unsafe_allow_html=True)
+                render_section("냉장실")
+                st.markdown('</div>', unsafe_allow_html=True)
 
         with col_freezer:
-            st.markdown(f"""
-            <div class="freezer-panel">
-                <div class="section-title">🧊 냉동실 (-18°C)</div>
-                {render_shelves("냉동실")}
-            </div>
-            """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<div class="freezer-box">', unsafe_allow_html=True)
+                render_section("냉동실")
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -372,7 +270,7 @@ else:
             if st.button("✨ 냉장고 재료로 레시피 추천받기", use_container_width=True):
                 if st.session_state.fridge_items:
                     names = [i["name"] for i in st.session_state.fridge_items]
-                    st.success(f"🍳 **오늘의 추천 요리:** **{', '.join(names[:3])}** 등을 활용한 초간단 자취생 요리를 완성해보세요!")
+                    st.success(f"🍳 **오늘의 추천 요리:** **{', '.join(names[:3])}** 등을 활용한 초간단 요리를 완성해보세요!")
                 else:
                     st.warning("등록된 재료가 없습니다!")
         with c_b2:
