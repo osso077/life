@@ -100,9 +100,7 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    /* =========================================
-       🧊 냉장고 내부 테마 전용 CSS
-       ========================================= */
+    /* 냉장고 내부 테마 CSS */
     .fridge-body {
         background: linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 50%, #e0f2f1 100%);
         border: 8px solid #cfd8dc;
@@ -199,7 +197,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 음식 이름 -> 이모지 자동 변환 함수
+# 3. 음식 이름 -> 이모지 자동 매핑 함수
 def get_food_emoji(name):
     food_map = {
         "계란": "🥚", "달걀": "🥚", "우유": "🥛", "치즈": "🧀", "버터": "🧈",
@@ -216,9 +214,9 @@ def get_food_emoji(name):
     for key, emoji in food_map.items():
         if key in name:
             return emoji
-    return "🍱"  # 매칭되는 게 없을 때 기본 도시락/음식 아이콘
+    return "🍱"
 
-# 4. 세션 상태 초기화
+# 4. 세션 상태 초기화 (데이터 구조 통일)
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
@@ -239,7 +237,6 @@ def navigate_to(menu_name):
 if st.session_state.selected_menu == "홈":
     st.markdown('<div style="text-align:center;"><span class="vibe-badge">⚡ ALL-IN-ONE LIFE HACK PLATFORM</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="mz-title">VIBE CHECK 🏝️</div>', unsafe_allow_html=True)
-    # 요청하신 대로 '일상'을 뺀 새로운 문장 적용
     st.markdown('<div class="mz-subtitle">나만의 스마트한 갓생 치트키 ⚡</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2, gap="medium")
@@ -284,11 +281,26 @@ else:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- [1] 냉장고 파먹기 (실제 냉장고 내부 테마 + 음식 아이콘 진열) ---
+    # --- [1] 냉장고 파먹기 ---
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 파먹기")
         st.caption("식재료를 입력하면 냉장고 선반에 아이콘으로 자동 진열됩니다!")
+
+        # 혹시 모를 구버전 데이터 호환을 위한 정제 로직
+        cleaned_items = []
+        for item in st.session_state.fridge_items:
+            if "name" in item and "days" in item:
+                cleaned_items.append(item)
+            elif "재료" in item:  # 예전 키 구조 대응
+                name_str = item["재료"].replace("🥗 ", "")
+                cleaned_items.append({
+                    "name": name_str,
+                    "emoji": get_food_emoji(name_str),
+                    "qty": item.get("수량", 1),
+                    "days": item.get("남은 유통기한(일)", 3)
+                })
+        st.session_state.fridge_items = cleaned_items
 
         # 식재료 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -311,12 +323,12 @@ else:
                     "days": new_expired
                 })
                 st.toast(f"{icon} '{clean_name}'이(가) 냉장고 선반에 들어갔어요!", icon="❄️")
+                st.rerun()
 
-        # 유통기한 임박(3일 이하) vs 여유(4일 이상) 선반 분리
+        # 유통기한 선반 분리
         urgent_items = [item for item in st.session_state.fridge_items if item["days"] <= 3]
         fresh_items = [item for item in st.session_state.fridge_items if item["days"] > 3]
 
-        # HTML로 실제 냉장고 내부 선반 렌더링
         urgent_html = ""
         if urgent_items:
             for item in sorted(urgent_items, key=lambda x: x["days"]):
@@ -366,7 +378,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # 하단 액션 버튼 (레시피 추천 / 비우기)
         col_btn1, col_btn2 = st.columns([3, 1])
         with col_btn1:
             if st.button("✨ 지금 있는 재료로 레시피 추천받기", use_container_width=True):
