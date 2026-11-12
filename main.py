@@ -117,7 +117,7 @@ def navigate_to(menu_name):
     st.session_state.selected_menu = menu_name
 
 # ==========================================
-# 4. 홈 화면 (미니멀 & 힙한 버튼 디자인)
+# 4. 홈 화면 (오타 수정 및 깔끔한 버튼 배치)
 # ==========================================
 if st.session_state.selected_menu == "홈":
     st.markdown('<div style="text-align:center;"><span class="vibe-badge">⚡ ALL-IN-ONE LIFE HACK PLATFORM</span></div>', unsafe_allow_html=True)
@@ -133,6 +133,7 @@ if st.session_state.selected_menu == "홈":
 
         st.write("")
 
+        # 오타 수정 완료: '익명 고민 상담소'
         if st.button("💜 익명 고민 상담소", key="btn_worry", use_container_width=True):
             navigate_to("고민 상담소")
             st.rerun()
@@ -157,7 +158,7 @@ if st.session_state.selected_menu == "홈":
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 개별 기능 페이지들 (단조로움 해소 및 고도화)
+# 5. 개별 기능 페이지들
 # ==========================================
 else:
     if st.button("⬅️ 메인으로", key="btn_home"):
