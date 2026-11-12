@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import time
 import random
+import re
 
 # 1. 페이지 기본 설정
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. MZ 감성 & 좌우 분할 냉장고 내부 테마 CSS
+# 2. MZ 감성 & 좌우 분할 냉장고 내부 테마 CSS (초간결 심플 디자인)
 st.markdown("""
 <style>
     .stApp {
@@ -91,23 +92,14 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.25) !important;
     }
 
-    .glass-card {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 24px;
-        padding: 24px;
-        backdrop-filter: blur(12px);
-        margin-bottom: 20px;
-    }
-
-    /* 심플하고 직관적인 냉장고 스타일 */
+    /* 냉장고 패널 스타일 */
     .fridge-panel {
         background: linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 100%);
         border: 6px solid #cfd8dc;
         border-radius: 24px;
         padding: 16px;
         color: #102a43;
-        min-height: 500px;
+        min-height: 480px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
 
@@ -117,7 +109,7 @@ st.markdown("""
         border-radius: 24px;
         padding: 16px;
         color: #102a43;
-        min-height: 500px;
+        min-height: 480px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
 
@@ -132,23 +124,23 @@ st.markdown("""
     }
 
     .mini-shelf {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.75);
         border-bottom: 4px solid #80deea;
         border-radius: 12px;
-        padding: 10px;
+        padding: 10px 14px;
         margin-bottom: 12px;
     }
 
     .mini-shelf-freezer {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.75);
         border-bottom: 4px solid #90a4ae;
         border-radius: 12px;
-        padding: 10px;
+        padding: 10px 14px;
         margin-bottom: 12px;
     }
 
     .shelf-category {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 800;
         color: #37474f;
         margin-bottom: 6px;
@@ -158,26 +150,27 @@ st.markdown("""
     .simple-food-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
     }
 
+    /* 초간단 심플 푸드 칩 */
     .food-tag {
         background: #ffffff;
         border: 1px solid #b0bec5;
         border-radius: 10px;
-        padding: 6px 10px;
+        padding: 5px 10px;
         font-size: 0.85rem;
         font-weight: 700;
         color: #263238;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
 
     .d-day-tag {
-        font-size: 0.7rem;
-        padding: 2px 6px;
+        font-size: 0.65rem;
+        padding: 2px 5px;
         border-radius: 6px;
         font-weight: 800;
     }
@@ -204,7 +197,7 @@ def get_food_emoji(name):
             return emoji
     return "🍱"
 
-# 4. 재료 종류(상/중/하단 선반 분류) 판별 함수
+# 4. 재료 종류 판별 함수
 def get_food_category(name):
     meat_keywords = ["고기", "삼겹살", "소고기", "돼지", "치킨", "닭", "생선", "연어", "새우", "오징어", "베이컨", "햄", "만두"]
     dairy_keywords = ["우유", "치즈", "버터", "계란", "달걀", "요거트", "요플레"]
@@ -215,18 +208,12 @@ def get_food_category(name):
     else:
         return "채소/과일/기타"
 
-# 5. 세션 상태 초기화
+# 5. 세션 상태 초기화 (초기값 빈 리스트로 설정하여 텅 빈 상태로 시작)
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
 if "fridge_items" not in st.session_state:
-    st.session_state.fridge_items = [
-        {"name": "치즈", "type": "냉장실", "qty": 3, "days": 1},
-        {"name": "계란", "type": "냉장실", "qty": 4, "days": 2},
-        {"name": "양파", "type": "냉장실", "qty": 2, "days": 6},
-        {"name": "만두", "type": "냉동실", "qty": 1, "days": 30},
-        {"name": "삼겹살", "type": "냉동실", "qty": 2, "days": 15},
-    ]
+    st.session_state.fridge_items = []
 
 def navigate_to(menu_name):
     st.session_state.selected_menu = menu_name
@@ -279,12 +266,10 @@ else:
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
         st.caption("냉장실과 냉동실을 좌우로 분리하여 한눈에 심플하게 관리하세요!")
 
-        # 데이터 구조 정제 (이모지 중복 방지를 위해 이름에서 이모지 제거)
-        import re
+        # 데이터 정제
         cleaned = []
         for item in st.session_state.fridge_items:
             raw_name = item.get("name", "음식")
-            # 이름에 포함된 이모지나 특수문자 제거 정제
             clean_name = re.sub(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]', '', raw_name).strip()
             if not clean_name:
                 clean_name = "음식"
@@ -292,7 +277,7 @@ else:
                 "name": clean_name,
                 "type": item.get("type", "냉장실"),
                 "qty": item.get("qty", 1),
-                "days": item.get("days", 3)
+                "days": item.get("days", 5)
             })
         st.session_state.fridge_items = cleaned
 
@@ -333,11 +318,12 @@ else:
 
             def make_tags(lst):
                 if not lst:
-                    return "<span style='color:#78909c; font-size:0.8rem;'>비어있음 🍃</span>"
+                    return "<span style='color:#78909c; font-size:0.75rem;'>비어있음 🍃</span>"
                 res = ""
                 for it in lst:
                     emoji = get_food_emoji(it["name"])
                     badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
+                    # 중복 이모지 없이 딱 1개 아이콘 + 이름 + 수량으로 깔끔하게 출력
                     res += f"""
                     <div class="food-tag">
                         <span>{emoji} {it['name']} ({it['qty']}개)</span>
