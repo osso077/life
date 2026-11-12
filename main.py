@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 스케치 디자인 맞춤형 냉장고/냉동실 CSS
+# 2. 애매한 도형 제거 및 스케치 맞춤형 깔끔한 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -74,36 +74,24 @@ st.markdown("""
     .st-key-btn_home button { background: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; font-size: 0.95rem !important; }
 
     /* =========================================
-       🧊 스케치 형태 맞춤형 냉장고/냉동실 프레임
+       🧊 깔끔한 냉장고/냉동실 프레임 (도형 제거 완료)
        ========================================= */
     .fridge-sketch-box {
         background: #e0f7fa;
-        border: 5px solid #00bbf9;
-        border-radius: 28px;
+        border: 4px solid #00bbf9;
+        border-radius: 24px;
         padding: 24px;
-        box-shadow: 0 15px 35px rgba(0, 188, 212, 0.3);
+        box-shadow: 0 15px 35px rgba(0, 188, 212, 0.25);
         color: #102a43;
     }
 
     .freezer-sketch-box {
         background: #f1f5f9;
-        border: 5px solid #94a3b8;
-        border-radius: 28px;
+        border: 4px solid #94a3b8;
+        border-radius: 24px;
         padding: 24px;
-        box-shadow: 0 15px 35px rgba(148, 163, 184, 0.3);
+        box-shadow: 0 15px 35px rgba(148, 163, 184, 0.25);
         color: #102a43;
-    }
-
-    .compartment-title {
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 900;
-        padding: 10px;
-        border-radius: 14px;
-        margin-bottom: 20px;
-        background: #ffffff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: 2px solid #cbd5e1;
     }
 
     .sketch-shelf {
@@ -247,7 +235,7 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 좌우 분할 (냉장실 vs 냉동실) - 스케치 디자인 반영
+        # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
         def render_sketch_section(comp_type):
@@ -257,10 +245,11 @@ else:
             cat2 = [i for i in items if get_food_category(i["name"]) == "유제품/반찬"]
             cat3 = [i for i in items if get_food_category(i["name"]) == "육류/해산물/냉동식품"]
 
-            title_text = "냉장실" if comp_type == "냉장실" else "냉동실"
+            title_text = "❄️ 냉장실 (3°C)" if comp_type == "냉장실" else "🧊 냉동실 (-18°C)"
             title_color = "#0284c7" if comp_type == "냉장실" else "#475569"
             
-            st.markdown(f'<div class="compartment-title" style="color:{title_color};">{title_text}</div>', unsafe_allow_html=True)
+            # 애매한 도형 없이 깔끔한 마크다운 헤더로 타이틀 적용
+            st.markdown(f"<h2 style='color:{title_color}; text-align:center; font-weight:900; margin-bottom:20px;'>{title_text}</h2>", unsafe_allow_html=True)
             
             def make_chips(lst):
                 if not lst:
