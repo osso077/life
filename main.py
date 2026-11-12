@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 전체 구역을 하나의 냉장고 문(도형)으로 깔끔하게 감싸는 CSS
+# 2. 선반 격리 및 큼직한 아이콘 그리드 전용 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -74,60 +74,93 @@ st.markdown("""
     .st-key-btn_home button { background: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; font-size: 0.95rem !important; }
 
     /* =========================================
-       🧊 타이틀부터 음식 목록까지 전부 감싸는 완벽한 냉장고 문 틀
+       🧊 냉장고 문 틀 및 선반 칸 구획 디자인
        ========================================= */
     .fridge-door-box {
         background: #e0f7fa;
-        border: 4px solid #00bbf9;
+        border: 5px solid #00bbf9;
         border-radius: 28px;
-        padding: 24px;
+        padding: 20px;
         box-shadow: 0 15px 35px rgba(0, 188, 212, 0.25);
         color: #102a43;
     }
 
     .freezer-door-box {
         background: #f1f5f9;
-        border: 4px solid #94a3b8;
+        border: 5px solid #94a3b8;
         border-radius: 28px;
-        padding: 24px;
+        padding: 20px;
         box-shadow: 0 15px 35px rgba(148, 163, 184, 0.25);
         color: #102a43;
     }
 
     .door-title {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 900;
         text-align: center;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 3px dashed rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 3px dashed rgba(0,0,0,0.12);
     }
 
-    .sketch-shelf {
+    /* 선반 칸 하나하나를 명확히 구분하는 박스 */
+    .shelf-compartment {
         background: #ffffff;
-        border-bottom: 4px solid #bae6fd;
+        border: 2px solid #cbd5e1;
         border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 14px;
+        padding: 12px;
+        margin-bottom: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
 
-    .food-chip {
-        display: inline-flex;
-        align-items: center;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 10px;
-        padding: 6px 12px;
-        margin: 4px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: #1e293b;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    .shelf-label {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #475569;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
-    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; margin-left: 8px; font-weight: 800; }
-    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; margin-left: 8px; font-weight: 800; }
+    /* 큼직한 아이콘과 밑에 작은 글자가 들어가는 푸드 카드 */
+    .food-grid-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .big-icon-card {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 14px;
+        text-align: center;
+        min-width: 85px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+
+    .food-big-emoji {
+        font-size: 2.8rem; /* 아이콘 크게 강조 */
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .food-name-small {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #1e293b;
+        display: block;
+    }
+
+    .food-qty-small {
+        font-size: 0.7rem;
+        color: #64748b;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-top: 2px; }
+    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-top: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -216,7 +249,7 @@ else:
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
-        st.caption("식재료를 입력하면 냉장실과 냉동실 문 안쪽에 선반별로 깔끔하게 정리됩니다.")
+        st.caption("선반 칸별로 큼직한 아이콘과 함께 직관적으로 정리된 인벤토리입니다.")
 
         # 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -247,23 +280,25 @@ else:
         # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def make_chips(lst):
+        def make_big_icon_cards(lst):
             if not lst:
-                return "<span style='color:#94a3b8; font-size:0.85rem;'>비어있음 🍃</span>"
-            chips_html = ""
+                return "<span style='color:#94a3b8; font-size:0.85rem;'>선반이 비어있습니다 🍃</span>"
+            cards_html = ""
             for it in lst:
                 emoji = get_food_emoji(it["name"])
                 badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
                 badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
-                chips_html += f"""
-                <div class="food-chip">
-                    {emoji}&nbsp;<b>{it['name']}</b>&nbsp;({it['qty']}개)
+                cards_html += f"""
+                <div class="big-icon-card">
+                    <span class="food-big-emoji">{emoji}</span>
+                    <span class="food-name-small">{it['name']}</span>
+                    <span class="food-qty-small">{it['qty']}개 보관</span>
                     <span class="{badge_class}">{badge_text}</span>
                 </div>
                 """
-            return chips_html
+            return cards_html
 
-        def render_door_section(comp_type):
+        def render_compartment(comp_type):
             items = [i for i in st.session_state.fridge_items if i["type"] == comp_type]
             
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
@@ -274,33 +309,32 @@ else:
             title_color = "#0284c7" if comp_type == "냉장실" else "#334155"
             box_class = "fridge-door-box" if comp_type == "냉장실" else "freezer-door-box"
 
-            # 하나의 큰 박스(문 틀) 안에 타이틀과 선반들이 모두 포함되도록 렌더링
             st.markdown(f"""
             <div class="{box_class}">
                 <div class="door-title" style="color:{title_color};">{title_text}</div>
                 
-                <div class="sketch-shelf">
-                    <div style="font-size:0.85rem; font-weight:800; color:#0284c7; margin-bottom:8px;">🥗 상단 : 채소 · 과일</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat1)}</div>
+                <div class="shelf-compartment">
+                    <div class="shelf-label" style="color:#0284c7;">🥗 상단 칸 : 채소 · 과일</div>
+                    <div class="food-grid-container">{make_big_icon_cards(cat1)}</div>
                 </div>
                 
-                <div class="sketch-shelf">
-                    <div style="font-size:0.85rem; font-weight:800; color:#d97706; margin-bottom:8px;">🧀 중단 : 유제품 · 반찬</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat2)}</div>
+                <div class="shelf-compartment">
+                    <div class="shelf-label" style="color:#d97706;">🧀 중단 칸 : 유제품 · 반찬</div>
+                    <div class="food-grid-container">{make_big_icon_cards(cat2)}</div>
                 </div>
                 
-                <div class="sketch-shelf" style="margin-bottom:0;">
-                    <div style="font-size:0.85rem; font-weight:800; color:#e11d48; margin-bottom:8px;">🥩 하단 : 육류 · 가공식품</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat3)}</div>
+                <div class="shelf-compartment" style="margin-bottom:0;">
+                    <div class="shelf-label" style="color:#e11d48;">🥩 하단 칸 : 육류 · 가공식품</div>
+                    <div class="food-grid-container">{make_big_icon_cards(cat3)}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_fridge:
-            render_door_section("냉장실")
+            render_compartment("냉장실")
 
         with col_freezer:
-            render_door_section("냉동실")
+            render_compartment("냉동실")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
