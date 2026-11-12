@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. MZ 감성 커스텀 CSS 주입
+# 2. MZ 감성 & 냉장고 내부 테마 커스텀 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -99,30 +99,148 @@ st.markdown("""
         backdrop-filter: blur(12px);
         margin-bottom: 20px;
     }
+
+    /* =========================================
+       🧊 냉장고 내부 테마 전용 CSS
+       ========================================= */
+    .fridge-body {
+        background: linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 50%, #e0f2f1 100%);
+        border: 8px solid #cfd8dc;
+        border-radius: 28px;
+        padding: 20px;
+        box-shadow: inset 0 0 30px rgba(0, 188, 212, 0.35), 0 15px 35px rgba(0, 0, 0, 0.4);
+        color: #102a43;
+        margin-top: 15px;
+        margin-bottom: 25px;
+    }
+
+    .fridge-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 10px 18px;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        font-weight: 800;
+        color: #006064;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .fridge-shelf {
+        background: rgba(255, 255, 255, 0.65);
+        border-bottom: 6px solid #80deea;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 10px rgba(0, 151, 167, 0.12);
+    }
+
+    .shelf-label {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #00838f;
+        margin-bottom: 12px;
+        display: block;
+    }
+
+    .food-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .food-item-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 12px 14px;
+        text-align: center;
+        min-width: 85px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 2px solid #e0f7fa;
+        transition: transform 0.2s;
+    }
+
+    .food-item-card:hover {
+        transform: scale(1.06);
+    }
+
+    .food-emoji {
+        font-size: 2.2rem;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .food-name {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #102a43;
+        display: block;
+    }
+
+    .food-meta {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 99px;
+        display: inline-block;
+        margin-top: 4px;
+    }
+
+    .urgent-badge {
+        background: #ffebee;
+        color: #d32f2f;
+    }
+
+    .safe-badge {
+        background: #e0f2f1;
+        color: #00695c;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 세션 상태 초기화
+# 3. 음식 이름 -> 이모지 자동 변환 함수
+def get_food_emoji(name):
+    food_map = {
+        "계란": "🥚", "달걀": "🥚", "우유": "🥛", "치즈": "🧀", "버터": "🧈",
+        "양파": "🧅", "대파": "🧅", "파": "🧅", "마늘": "🧄", "감자": "🥔",
+        "고구마": "🍠", "당근": "🥕", "토마토": "🍅", "오이": "🥒", "배추": "🥬",
+        "김치": "🥬", "상추": "🥬", "양배추": "🥬", "브로콜리": "🥦", "버섯": "🍄",
+        "사과": "🍎", "바나나": "🍌", "딸기": "🍓", "포도": "🍇", "수박": "🍉",
+        "고기": "🥩", "소고기": "🥩", "돼지고기": "🥓", "삼겹살": "🥓", "베이컨": "🥓",
+        "닭고기": "🍗", "치킨": "🍗", "햄": "🍖", "소시지": "🌭", "스팸": "🥫",
+        "참치": "🥫", "생선": "🐟", "연어": "🍣", "새우": "🦐", "오징어": "🦑",
+        "밥": "🍚", "빵": "🍞", "식빵": "🍞", "라면": "🍜", "면": "🍝",
+        "두부": "⬜", "만두": "🥟", "물": "💧", "주스": "🧃", "맥주": "🍺"
+    }
+    for key, emoji in food_map.items():
+        if key in name:
+            return emoji
+    return "🍱"  # 매칭되는 게 없을 때 기본 도시락/음식 아이콘
+
+# 4. 세션 상태 초기화
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
 if "fridge_items" not in st.session_state:
     st.session_state.fridge_items = [
-        {"재료": "🥚 계란", "수량": 4, "남은 유통기한(일)": 2},
-        {"재료": "🧅 양파", "수량": 2, "남은 유통기한(일)": 5},
-        {"재료": "🧀 치즈", "수량": 3, "남은 유통기한(일)": 1}
+        {"name": "치즈", "emoji": "🧀", "qty": 3, "days": 1},
+        {"name": "계란", "emoji": "🥚", "qty": 4, "days": 2},
+        {"name": "우유", "emoji": "🥛", "qty": 1, "days": 4},
+        {"name": "양파", "emoji": "🧅", "qty": 2, "days": 6},
     ]
 
 def navigate_to(menu_name):
     st.session_state.selected_menu = menu_name
 
 # ==========================================
-# 4. 홈 화면 (오타 수정 및 깔끔한 버튼 배치)
+# 5. 홈 화면
 # ==========================================
 if st.session_state.selected_menu == "홈":
     st.markdown('<div style="text-align:center;"><span class="vibe-badge">⚡ ALL-IN-ONE LIFE HACK PLATFORM</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="mz-title">VIBE CHECK 🏝️</div>', unsafe_allow_html=True)
-    st.markdown('<div class="mz-subtitle">나만의 스마트한 일상 관리 치트키</div>', unsafe_allow_html=True)
+    # 요청하신 대로 '일상'을 뺀 새로운 문장 적용
+    st.markdown('<div class="mz-subtitle">나만의 스마트한 갓생 치트키 ⚡</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2, gap="medium")
 
@@ -133,7 +251,6 @@ if st.session_state.selected_menu == "홈":
 
         st.write("")
 
-        # 오타 수정 완료: '익명 고민 상담소'
         if st.button("💜 익명 고민 상담소", key="btn_worry", use_container_width=True):
             navigate_to("고민 상담소")
             st.rerun()
@@ -158,7 +275,7 @@ if st.session_state.selected_menu == "홈":
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 개별 기능 페이지들
+# 6. 개별 기능 페이지들
 # ==========================================
 else:
     if st.button("⬅️ 메인으로", key="btn_home"):
@@ -167,41 +284,102 @@ else:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- [1] 냉장고 파먹기 ---
+    # --- [1] 냉장고 파먹기 (실제 냉장고 내부 테마 + 음식 아이콘 진열) ---
     if st.session_state.selected_menu == "냉장고 파먹기":
-        st.markdown('<span class="vibe-badge">ECO-KITCHEN</span>', unsafe_allow_html=True)
+        st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 파먹기")
-        st.caption("유통기한 임박 재료를 파악하고 맞춤형 레시피를 추천받으세요.")
+        st.caption("식재료를 입력하면 냉장고 선반에 아이콘으로 자동 진열됩니다!")
 
+        # 식재료 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
             c1, c2, c3 = st.columns([2, 1, 1])
             with c1:
-                new_item = st.text_input("식재료 이름", placeholder="예: 스팸, 김치")
+                new_item = st.text_input("음식 이름", placeholder="예: 삼겹살, 김치, 사과, 스팸")
             with c2:
                 new_qty = st.number_input("수량", min_value=1, value=1)
             with c3:
                 new_expired = st.number_input("유통기한(일)", min_value=1, value=3)
             
-            submitted = st.form_submit_button("➕ 식재료 추가", use_container_width=True)
-            if submitted and new_item:
+            submitted = st.form_submit_button("📥 냉장고 문 열고 넣기", use_container_width=True)
+            if submitted and new_item.strip():
+                clean_name = new_item.strip()
+                icon = get_food_emoji(clean_name)
                 st.session_state.fridge_items.append({
-                    "재료": f"🥗 {new_item}",
-                    "수량": new_qty,
-                    "남은 유통기한(일)": new_expired
+                    "name": clean_name,
+                    "emoji": icon,
+                    "qty": new_qty,
+                    "days": new_expired
                 })
-                st.toast(f"'{new_item}'이(가) 추가되었습니다!", icon="✅")
+                st.toast(f"{icon} '{clean_name}'이(가) 냉장고 선반에 들어갔어요!", icon="❄️")
 
-        st.subheader("🧊 인벤토리 현황")
-        df_fridge = pd.DataFrame(st.session_state.fridge_items).sort_values(by="남은 유통기한(일)")
-        st.dataframe(df_fridge, use_container_width=True, hide_index=True)
+        # 유통기한 임박(3일 이하) vs 여유(4일 이상) 선반 분리
+        urgent_items = [item for item in st.session_state.fridge_items if item["days"] <= 3]
+        fresh_items = [item for item in st.session_state.fridge_items if item["days"] > 3]
 
-        if st.button("✨ 맞춤형 레시피 조합 생성", use_container_width=True):
-            recipes = [
-                "🔥 **치즈 계란볶음밥:** 남은 계란과 치즈, 양파를 잘게 썰어 버터에 볶아낸 초간단 요리!",
-                "🍲 **만능 재료 찌개:** 냉장고 속 자투리 재료를 모두 때려 넣고 고추장으로 간을 맞춘 얼큰한 찌개!",
-                "🥪 **토스트 브런치:** 식빵(또는 남은 빵)에 치즈와 계란을 얹어 오븐이나 프라이팬에 구워낸 브런치!"
-            ]
-            st.success(random.choice(recipes))
+        # HTML로 실제 냉장고 내부 선반 렌더링
+        urgent_html = ""
+        if urgent_items:
+            for item in sorted(urgent_items, key=lambda x: x["days"]):
+                urgent_html += f"""
+                <div class="food-item-card">
+                    <span class="food-emoji">{item['emoji']}</span>
+                    <span class="food-name">{item['name']} ({item['qty']}개)</span>
+                    <span class="food-meta urgent-badge">D-{item['days']} 임박!</span>
+                </div>
+                """
+        else:
+            urgent_html = "<span style='color:#607d8b; font-size:0.9rem;'>유통기한 임박 재료가 없습니다 ✨</span>"
+
+        fresh_html = ""
+        if fresh_items:
+            for item in sorted(fresh_items, key=lambda x: x["days"]):
+                fresh_html += f"""
+                <div class="food-item-card">
+                    <span class="food-emoji">{item['emoji']}</span>
+                    <span class="food-name">{item['name']} ({item['qty']}개)</span>
+                    <span class="food-meta safe-badge">D-{item['days']} 여유</span>
+                </div>
+                """
+        else:
+            fresh_html = "<span style='color:#607d8b; font-size:0.9rem;'>보관 중인 신선 재료가 비어있습니다 텅~</span>"
+
+        st.markdown(f"""
+        <div class="fridge-body">
+            <div class="fridge-header">
+                <span>❄️ 냉장실 내부 현황 (3°C)</span>
+                <span>총 {len(st.session_state.fridge_items)}종 보관중</span>
+            </div>
+            
+            <div class="fridge-shelf">
+                <span class="shelf-label">🚨 상단 선반 : 빨리 먹어야 해요! (유통기한 3일 이내)</span>
+                <div class="food-grid">
+                    {urgent_html}
+                </div>
+            </div>
+
+            <div class="fridge-shelf" style="margin-bottom: 0;">
+                <span class="shelf-label">🥬 하단 신선칸 : 아직 여유 있어요 (유통기한 4일 이상)</span>
+                <div class="food-grid">
+                    {fresh_html}
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 하단 액션 버튼 (레시피 추천 / 비우기)
+        col_btn1, col_btn2 = st.columns([3, 1])
+        with col_btn1:
+            if st.button("✨ 지금 있는 재료로 레시피 추천받기", use_container_width=True):
+                if st.session_state.fridge_items:
+                    names = [i["name"] for i in st.session_state.fridge_items]
+                    picked = ", ".join(names[:3])
+                    st.success(f"🍳 **오늘의 냉파 추천 메뉴:** 냉장고 속 **{picked}** 등을 활용한 **'자취생 특제 원팬 볶음밥 & 계란찜'**을 강력 추천합니다!")
+                else:
+                    st.warning("냉장고가 비어있어요! 재료를 먼저 넣어주세요.")
+        with col_btn2:
+            if st.button("🗑️ 전체 비우기", use_container_width=True):
+                st.session_state.fridge_items = []
+                st.rerun()
 
     # --- [2] 스터디 타이머 ---
     elif st.session_state.selected_menu == "스터디 타이머":
