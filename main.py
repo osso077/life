@@ -11,13 +11,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 전반적인 MZ 감성 다크 테마 CSS
+# 2. 가독성 & 시인성 극대화 커스텀 CSS (텍스트 안 보임 문제 완벽 해결)
 st.markdown("""
 <style>
+    /* 전체 앱 배경 및 기본 글자색 흰색 고정 */
     .stApp {
         background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
-        color: #ffffff;
+        color: #ffffff !important;
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* 모든 기본 텍스트, 라벨, 설명 글자 색상 선명하게 조정 */
+    p, span, label, .stMarkdown, div {
+        color: #f0f2f6;
     }
 
     .mz-title {
@@ -34,16 +40,15 @@ st.markdown("""
     .mz-subtitle {
         text-align: center;
         color: #b8c1ec;
-        font-size: 1.05rem;
-        font-weight: 500;
+        font-size: 1.1rem;
+        font-weight: 600;
         margin-bottom: 2rem;
     }
 
     .vibe-badge {
         display: inline-block;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
+        background: rgba(0, 245, 212, 0.15);
+        border: 1px solid #00f5d4;
         padding: 6px 16px;
         border-radius: 999px;
         font-size: 0.85rem;
@@ -52,6 +57,7 @@ st.markdown("""
         margin-bottom: 12px;
     }
 
+    /* 홈 화면 버튼 스타일 */
     div.stButton > button {
         border-radius: 20px !important;
         padding: 1.4rem 1rem !important;
@@ -59,7 +65,7 @@ st.markdown("""
         font-weight: 800 !important;
         border: none !important;
         transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
     }
 
     div.stButton > button:hover {
@@ -67,46 +73,52 @@ st.markdown("""
         box-shadow: 0 14px 28px rgba(0, 245, 212, 0.35) !important;
     }
 
-    .st-key-btn_fridge button {
-        background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%) !important;
-        color: #0b0920 !important;
-    }
-    .st-key-btn_study button {
-        background: linear-gradient(135deg, #fee440 0%, #ff9f1c 100%) !important;
-        color: #0b0920 !important;
-    }
-    .st-key-btn_worry button {
-        background: linear-gradient(135deg, #f15bb5 0%, #9b5de5 100%) !important;
-        color: #ffffff !important;
-    }
-    .st-key-btn_fact button {
-        background: linear-gradient(135deg, #ff4d6d 0%, #ff758f 100%) !important;
-        color: #ffffff !important;
+    .st-key-btn_fridge button { background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%) !important; color: #0b0920 !important; }
+    .st-key-btn_study button { background: linear-gradient(135deg, #fee440 0%, #ff9f1c 100%) !important; color: #0b0920 !important; }
+    .st-key-btn_worry button { background: linear-gradient(135deg, #f15bb5 0%, #9b5de5 100%) !important; color: #ffffff !important; }
+    .st-key-btn_fact button { background: linear-gradient(135deg, #ff4d6d 0%, #ff758f 100%) !important; color: #ffffff !important; }
+    .st-key-btn_home button { background: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; font-size: 0.95rem !important; }
+
+    /* 눈에 확 띄는 냉장고/냉동실 패널 (배경과 확실히 분리) */
+    .fridge-container {
+        background: rgba(13, 71, 161, 0.35);
+        border: 3px solid #00bbf9;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     }
 
-    .st-key-btn_home button {
-        background: rgba(255, 255, 255, 0.12) !important;
-        color: #ffffff !important;
-        padding: 0.6rem 1.2rem !important;
-        font-size: 0.95rem !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    }
-
-    /* 냉장고/냉동실 박스 스타일 */
-    .fridge-box {
-        background: rgba(224, 247, 250, 0.1);
-        border: 3px solid #80deea;
-        border-radius: 20px;
-        padding: 20px;
-        color: #ffffff;
-    }
-    .freezer-box {
-        background: rgba(236, 237, 238, 0.1);
+    .freezer-container {
+        background: rgba(55, 71, 79, 0.45);
         border: 3px solid #b0bec5;
-        border-radius: 20px;
-        padding: 20px;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .shelf-box {
+        background: rgba(255, 255, 255, 0.08);
+        border-left: 5px solid #00f5d4;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+    }
+
+    .food-chip {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        padding: 6px 12px;
+        margin: 4px;
+        font-weight: 700;
+        font-size: 0.9rem;
         color: #ffffff;
     }
+
+    .badge-urgent { background: rgba(255, 82, 82, 0.3); color: #ff8a80; border: 1px solid #ff5252; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; margin-left: 8px; }
+    .badge-safe { background: rgba(0, 230, 118, 0.2); color: #69f0ae; border: 1px solid #00e676; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; margin-left: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,7 +151,7 @@ def get_food_category(name):
     else:
         return "채소/과일/기타"
 
-# 5. 세션 상태 초기화 (완전 텅 빈 상태로 시작)
+# 5. 세션 상태 초기화 (완전 텅 빈 상태)
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
@@ -195,7 +207,7 @@ else:
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
-        st.caption("식재료를 입력하면 냉장실과 냉동실의 선반별로 깔끔하게 정리됩니다.")
+        st.caption("식재료를 입력하면 냉장실과 냉동실의 선반별로 선명하게 정리됩니다.")
 
         # 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -226,42 +238,55 @@ else:
         # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def render_section(comp_type):
+        def render_clean_section(comp_type):
             items = [i for i in st.session_state.fridge_items if i["type"] == comp_type]
             
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
             cat2 = [i for i in items if get_food_category(i["name"]) == "유제품/반찬"]
             cat3 = [i for i in items if get_food_category(i["name"]) == "육류/해산물/냉동식품"]
 
-            st.markdown(f"### {'❄️ 냉장실 (3°C)' if comp_type == '냉장실' else '🧊 냉동실 (-18°C)'}")
+            st.markdown(f"<h3 style='color:#ffffff; text-align:center;'>{'❄️ 냉장실 (3°C)' if comp_type == '냉장실' else '🧊 냉동실 (-18°C)'}</h3>", unsafe_allow_html=True)
             
-            def show_list(lst):
+            def make_chips(lst):
                 if not lst:
-                    st.caption("비어있음 🍃")
-                    return
+                    return "<span style='color:#90a4ae; font-size:0.85rem;'>보관된 재료가 없습니다 🍃</span>"
+                chips_html = ""
                 for it in lst:
                     emoji = get_food_emoji(it["name"])
-                    d_tag = f"🔴 D-{it['days']}" if it["days"] <= 3 else f"🟢 D-{it['days']}"
-                    st.markdown(f"- {emoji} **{it['name']}** ({it['qty']}개) &nbsp; `{d_tag}`")
+                    badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
+                    badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
+                    chips_html += f"""
+                    <div class="food-chip">
+                        {emoji}&nbsp;<b>{it['name']}</b>&nbsp;({it['qty']}개)
+                        <span class="{badge_class}">{badge_text}</span>
+                    </div>
+                    """
+                return chips_html
 
-            st.markdown("##### 🥗 상단: 채소 · 과일")
-            show_list(cat1)
-            st.markdown("##### 🧀 중단: 유제품 · 반찬")
-            show_list(cat2)
-            st.markdown("##### 🥩 하단: 육류 · 가공식품")
-            show_list(cat3)
+            st.markdown(f"""
+            <div class="shelf-box">
+                <div style="font-size:0.85rem; font-weight:700; color:#00f5d4; margin-bottom:8px;">🥗 상단 : 채소 · 과일</div>
+                {make_chips(cat1)}
+            </div>
+            <div class="shelf-box">
+                <div style="font-size:0.85rem; font-weight:700; color:#fee440; margin-bottom:8px;">🧀 중단 : 유제품 · 반찬</div>
+                {make_chips(cat2)}
+            </div>
+            <div class="shelf-box" style="margin-bottom:0;">
+                <div style="font-size:0.85rem; font-weight:700; color:#ff758f; margin-bottom:8px;">🥩 하단 : 육류 · 가공식품</div>
+                {make_chips(cat3)}
+            </div>
+            """, unsafe_allow_html=True)
 
         with col_fridge:
-            with st.container():
-                st.markdown('<div class="fridge-box">', unsafe_allow_html=True)
-                render_section("냉장실")
-                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('<div class="fridge-container">', unsafe_allow_html=True)
+            render_clean_section("냉장실")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with col_freezer:
-            with st.container():
-                st.markdown('<div class="freezer-box">', unsafe_allow_html=True)
-                render_section("냉동실")
-                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('<div class="freezer-container">', unsafe_allow_html=True)
+            render_clean_section("냉동실")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         
