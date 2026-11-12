@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 개큰 아이콘 + 아래 작은 글씨 카드 전용 스타일 CSS
+# 2. 가독성 및 개큰 아이콘 카드 스타일 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -104,7 +104,7 @@ st.markdown("""
         background: #ffffff;
         border: 2px solid #cbd5e1;
         border-radius: 14px;
-        padding: 14px;
+        padding: 12px;
         margin-bottom: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
@@ -112,48 +112,39 @@ st.markdown("""
     .shelf-label {
         font-size: 0.85rem;
         font-weight: 900;
-        margin-bottom: 10px;
-    }
-
-    .food-grid-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
+        margin-bottom: 8px;
     }
 
     /* 💥 개큰 음식 아이콘 카드 스타일 */
-    .giant-icon-card {
+    .giant-card {
         background: #f8fafc;
         border: 2px solid #cbd5e1;
-        border-radius: 14px;
-        padding: 12px 16px;
+        border-radius: 12px;
+        padding: 10px;
         text-align: center;
-        min-width: 95px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    .food-giant-emoji {
-        font-size: 3rem; /* 진짜 개큰 아이콘 */
+    .giant-emoji {
+        font-size: 2.8rem; /* 개큰 아이콘 */
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
-    .food-name-small {
-        font-size: 0.85rem;
+    .food-name {
+        font-size: 0.8rem;
         font-weight: 800;
         color: #1e293b;
-        display: block;
     }
 
-    .food-qty-small {
-        font-size: 0.7rem;
+    .food-qty {
+        font-size: 0.65rem;
         color: #64748b;
-        display: block;
         margin-bottom: 4px;
     }
 
-    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; }
-    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; }
+    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 1px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; display: inline-block; }
+    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 1px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; display: inline-block; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -273,25 +264,7 @@ else:
         # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def make_giant_icon_cards(lst):
-            if not lst:
-                return "<span style='color:#94a3b8; font-size:0.85rem;'>선반이 비어있습니다 🍃</span>"
-            cards_html = ""
-            for it in lst:
-                emoji = get_food_emoji(it["name"])
-                badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
-                badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
-                cards_html += f"""
-                <div class="giant-icon-card">
-                    <span class="food-giant-emoji">{emoji}</span>
-                    <span class="food-name-small">{it['name']}</span>
-                    <span class="food-qty-small">{it['qty']}개</span>
-                    <span class="{badge_class}">{badge_text}</span>
-                </div>
-                """
-            return cards_html
-
-        def render_compartment(comp_type):
+        def render_compartment_safely(comp_type):
             items = [i for i in st.session_state.fridge_items if i["type"] == comp_type]
             
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
@@ -302,32 +275,43 @@ else:
             title_color = "#0284c7" if comp_type == "냉장실" else "#334155"
             box_class = "fridge-door-box" if comp_type == "냉장실" else "freezer-door-box"
 
-            st.markdown(f"""
-            <div class="{box_class}">
-                <div class="door-title" style="color:{title_color};">{title_text}</div>
-                
-                <div class="shelf-compartment">
-                    <div class="shelf-label" style="color:#0284c7;">🥗 상단 칸 : 채소 · 과일</div>
-                    <div class="food-grid-container">{make_giant_icon_cards(cat1)}</div>
-                </div>
-                
-                <div class="shelf-compartment">
-                    <div class="shelf-label" style="color:#d97706;">🧀 중단 칸 : 유제품 · 반찬</div>
-                    <div class="food-grid-container">{make_giant_icon_cards(cat2)}</div>
-                </div>
-                
-                <div class="shelf-compartment" style="margin-bottom:0;">
-                    <div class="shelf-label" style="color:#e11d48;">🥩 하단 칸 : 육류 · 가공식품</div>
-                    <div class="food-grid-container">{make_giant_icon_cards(cat3)}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # 외곽 박스 시작
+            st.markdown(f'<div class="{box_class}"><div class="door-title" style="color:{title_color};">{title_text}</div>', unsafe_allow_html=True)
+
+            # 선반별 렌더링 함수 (스트림릿 네이티브 컬럼 활용으로 코드 노출 원천 방지)
+            def show_shelf_items(shelf_title, shelf_color, sub_items):
+                st.markdown(f'<div class="shelf-compartment"><div class="shelf-label" style="color:{shelf_color};">{shelf_title}</div>', unsafe_allow_html=True)
+                if not sub_items:
+                    st.markdown('<span style="color:#94a3b8; font-size:0.8rem;">선반이 비어있습니다 🍃</span>', unsafe_allow_html=True)
+                else:
+                    cols = st.columns(min(len(sub_items), 4))
+                    for idx, it in enumerate(sub_items):
+                        with cols[idx % len(cols)]:
+                            emoji = get_food_emoji(it["name"])
+                            badge_cls = "badge-urgent" if it["days"] <= 3 else "badge-safe"
+                            badge_txt = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
+                            st.markdown(f"""
+                            <div class="giant-card">
+                                <span class="giant-emoji">{emoji}</span>
+                                <div class="food-name">{it['name']}</div>
+                                <div class="food-qty">{it['qty']}개 보관</div>
+                                <span class="{badge_cls}">{badge_txt}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            show_shelf_items("🥗 상단 칸 : 채소 · 과일", "#0284c7", cat1)
+            show_shelf_items("🧀 중단 칸 : 유제품 · 반찬", "#d97706", cat2)
+            show_shelf_items("🥩 하단 칸 : 육류 · 가공식품", "#e11d48", cat3)
+
+            # 외곽 박스 종료
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with col_fridge:
-            render_compartment("냉장실")
+            render_compartment_safely("냉장실")
 
         with col_freezer:
-            render_compartment("냉동실")
+            render_compartment_safely("냉동실")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
