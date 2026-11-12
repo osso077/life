@@ -1,144 +1,293 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+import time
 
-# 페이지 기본 설정
+# 1. 페이지 기본 설정
 st.set_page_config(
-    page_title="프레시 아일랜드 (Fresh Island)",
-    page_icon="🏝️",
+    page_title="VIBE CHECK : 라이프 올인원",
+    page_icon="⚡",
     layout="centered"
 )
 
-# 세션 상태 초기화 (페이지 네비게이션용)
+# 2. MZ 감성 커스텀 CSS 주입 (네온 그라데이션 + 3D 팝 버튼 + 호버 애니메이션)
+st.markdown("""
+<style>
+    /* 전체 배경: 딥 다크 퍼플-네이비 그라데이션 */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
+        color: #ffffff;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* 힙한 그라데이션 메인 타이틀 */
+    .mz-title {
+        font-size: 3.2rem;
+        font-weight: 900;
+        text-align: center;
+        background: linear-gradient(90deg, #00f5d4, #00bbf9, #f15bb5, #fee440);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.2rem;
+        letter-spacing: -1px;
+    }
+
+    .mz-subtitle {
+        text-align: center;
+        color: #b8c1ec;
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-bottom: 2rem;
+    }
+
+    /* 배지 스타일 */
+    .vibe-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 6px 16px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        color: #00f5d4;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    /* 기본 스트림릿 버튼 커스텀 (크고 둥글고 입체감 있게) */
+    div.stButton > button {
+        border-radius: 20px !important;
+        padding: 1.4rem 1rem !important;
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        border: none !important;
+        transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    div.stButton > button:hover {
+        transform: translateY(-6px) scale(1.02) !important;
+        box-shadow: 0 14px 28px rgba(0, 245, 212, 0.35) !important;
+    }
+
+    /* 4가지 기능별 개별 버튼 컬러링 (key 기반 타겟팅) */
+    .st-key-btn_fridge button {
+        background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%) !important;
+        color: #0b0920 !important;
+    }
+    .st-key-btn_study button {
+        background: linear-gradient(135deg, #fee440 0%, #ff9f1c 100%) !important;
+        color: #0b0920 !important;
+    }
+    .st-key-btn_worry button {
+        background: linear-gradient(135deg, #f15bb5 0%, #9b5de5 100%) !important;
+        color: #ffffff !important;
+    }
+    .st-key-btn_fact button {
+        background: linear-gradient(135deg, #ff4d6d 0%, #ff758f 100%) !important;
+        color: #ffffff !important;
+    }
+
+    /* 홈으로 돌아가기 버튼 */
+    .st-key-btn_home button {
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: #ffffff !important;
+        padding: 0.6rem 1.2rem !important;
+        font-size: 0.95rem !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    }
+
+    /* 글래스모피즘 카드 컨테이너 */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 24px;
+        padding: 24px;
+        backdrop-filter: blur(12px);
+        margin-bottom: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# 3. 세션 상태 초기화
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "홈"
 
-# 냉장고 재료 리스트 임시 저장용 세션 상태
 if "fridge_items" not in st.session_state:
     st.session_state.fridge_items = [
-        {"재료": "계란", "수량": 4, "유통기한(일남음)": 2},
-        {"재료": "양파", "수량": 2, "유통기한(일남음)": 5}
+        {"재료": "🥚 계란", "수량": 4, "남은 유통기한(일)": 2},
+        {"재료": "🧅 양파", "수량": 2, "남은 유통기한(일)": 5},
+        {"재료": "🧀 치즈", "수량": 3, "남은 유통기한(일)": 1}
     ]
 
 def navigate_to(menu_name):
     st.session_state.selected_menu = menu_name
 
 # ==========================================
-# 1. 홈 화면 (메인 대시보드)
+# 4. 홈 화면 (다이나믹 MZ 대시보드)
 # ==========================================
 if st.session_state.selected_menu == "홈":
-    st.title("🏝️ 프레시 아일랜드 (Fresh Island)")
-    st.markdown("### 일상의 자원(식재료, 시간, 마음, 정보)을 똑똑하게 관리하고 정화하는 올인원 플랫폼")
-    st.write("---")
-    
-    st.info("💡 아래 버튼 중 원하는 기능을 선택하여 시작하세요!")
-    
-    # 2x2 그리드로 기능 선택 버튼 배치
-    col1, col2 = st.columns(2)
-    
+    st.markdown('<div style="text-align:center;"><span class="vibe-badge">⚡ ALL-IN-ONE LIFE HACK PLATFORM</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="mz-title">VIBE CHECK 🏝️</div>', unsafe_allow_html=True)
+    st.markdown('<div class="mz-subtitle">식재료 · 시간 · 멘탈 · 팩트까지 한 번에 케어하는 갓생 치트키</div>', unsafe_allow_html=True)
+
+    # 2x2 비비드 컬러 카드 버튼 그리드
+    col1, col2 = st.columns(2, gap="medium")
+
     with col1:
-        if st.button("🍳 스마트 냉장고 파먹기", use_container_width=True):
+        if st.button("🍳 냉장고 파먹기\n\n남은 재료로 뚝딱 레시피", key="btn_fridge", use_container_width=True):
             navigate_to("냉장고 파먹기")
             st.rerun()
-            
-        if st.button("🧠 익명 고민 상담소", use_container_width=True):
+
+        st.write("") # 간격
+
+        if st.button("💜 익명 고민 상담소\n\n오늘의 멘탈 날씨 예보", key="btn_worry", use_container_width=True):
             navigate_to("고민 상담소")
             st.rerun()
-            
+
     with col2:
-        if st.button("⏰ 공부 페이스메이커", use_container_width=True):
+        if st.button("🔥 공부 페이스메이커\n\nD-Day 역산 갓생 플래너", key="btn_study", use_container_width=True):
             navigate_to("공부 페이스메이커")
             st.rerun()
-            
-        if st.button("🔍 팩트체크 리트머스", use_container_width=True):
+
+        st.write("") # 간격
+
+        if st.button("🚨 팩트체크 리트머스\n\n어그로·가짜뉴스 판별기", key="btn_fact", use_container_width=True):
             navigate_to("팩트체크")
             st.rerun()
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="glass-card" style="text-align:center; padding: 16px;">
+        <span style="color:#00f5d4; font-weight:700;">✨ TODAY'S VIBE TIP</span><br>
+        <span style="color:#e0e0e0; font-size:0.95rem;">원하는 카드를 클릭하면 바로 실행됩니다. 오늘도 갓생 살자! 🚀</span>
+    </div>
+    """, unsafe_allow_html=True)
+
 # ==========================================
-# 2. 개별 기능 페이지들
+# 5. 개별 기능 페이지들
 # ==========================================
 else:
-    # 상단 홈으로 가기 버튼
-    if st.button("🏠 홈으로 돌아가기"):
+    if st.button("⬅️ 메인 허브로 돌아가기", key="btn_home"):
         navigate_to("홈")
         st.rerun()
-    
-    st.write("---")
 
-    # --- [Tab 1] 스마트 냉장고 파먹기 ---
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- [1] 스마트 냉장고 파먹기 ---
     if st.session_state.selected_menu == "냉장고 파먹기":
-        st.header("🍳 스마트 냉장고 파먹기 (Eco-Kitchen)")
-        st.write("남은 식재료를 등록하고 유통기한 임박 식재료를 확인해 보세요.")
-        
-        # 식재료 추가 입력 폼
-        with st.form("fridge_form"):
-            new_item = st.text_input("식재료 이름 (예: 참치캔, 우유)")
-            new_qty = st.number_input("수량", min_value=1, value=1)
-            new_expired = st.number_input("남은 유통기한 (일)", min_value=1, value=3)
-            submitted = st.form_submit_button("식재료 등록하기")
+        st.markdown('<span class="vibe-badge">ECO-KITCHEN</span>', unsafe_allow_html=True)
+        st.header("🍳 스마트 냉장고 파먹기")
+        st.caption("냉장고 속 잠자는 식재료를 깨워 맛있는 한 끼로 변신시켜 보세요!")
+
+        with st.form("fridge_form", clear_on_submit=True):
+            c1, c2, c3 = st.columns([2, 1, 1])
+            with c1:
+                new_item = st.text_input("식재료 이름", placeholder="예: 스팸, 대파")
+            with c2:
+                new_qty = st.number_input("수량", min_value=1, value=1)
+            with c3:
+                new_expired = st.number_input("유통기한(일)", min_value=1, value=3)
             
+            submitted = st.form_submit_button("➕ 냉장고에 넣기", use_container_width=True)
             if submitted and new_item:
-                st.session_state.fridge_items.append({"재료": new_item, "수량": new_qty, "유통기한(일남음)": new_expired})
-                st.success(f"'{new_item}'이(가) 냉장고에 등록되었습니다!")
+                st.session_state.fridge_items.append({
+                    "재료": f"🥗 {new_item}",
+                    "수량": new_qty,
+                    "남은 유통기한(일)": new_expired
+                })
+                st.toast(f"'{new_item}' 등록 완료! 🧊", icon="✅")
 
-        st.subheader("🧊 현재 나의 냉장고 현황")
-        df_fridge = pd.DataFrame(st.session_state.fridge_items)
-        st.dataframe(df_fridge, use_container_width=True)
-        
-        if st.button("✨ 남은 재료로 추천 레시피 보기"):
-            st.info("🍳 **추천 레시피:** 등록된 재료들을 활용해 간단하게 만들 수 있는 '자취생 특제 볶음밥'을 추천합니다!")
+        st.subheader("🧊 실시간 냉장고 인벤토리")
+        df_fridge = pd.DataFrame(st.session_state.fridge_items).sort_values(by="남은 유통기한(일)")
+        st.dataframe(df_fridge, use_container_width=True, hide_index=True)
 
-    # --- [Tab 2] 공부 페이스메이커 ---
+        if st.button("✨ 유통기한 임박 재료로 레시피 추천받기", use_container_width=True):
+            urgent_item = df_fridge.iloc[0]["재료"]
+            st.success(f"🔥 **긴급 구출 레시피:** 유통기한이 가장 짧은 **{urgent_item}**을(를) 메인으로 한 **'초간단 10분 자취생 특제 볶음밥'**을 추천합니다!")
+
+    # --- [2] 공부 페이스메이커 ---
     elif st.session_state.selected_menu == "공부 페이스메이커":
-        st.header("⏰ D-Day 역산 공부 페이스메이커")
-        st.write("시험 날짜와 남은 분량을 입력하면 오늘 해야 할 학습량을 계산해 드립니다.")
-        
-        target_subject = st.text_input("공부할 과목명 (예: 수능 수학)", "수학")
-        total_pages = st.number_input("총 학습 분량 (페이지 또는 문제 수)", min_value=1, value=250)
-        days_left = st.number_input("시험까지 남은 날수 (D-Day)", min_value=1, value=15)
-        
-        if st.button("학습 페이스 계산하기"):
-            daily_goal = total_pages / days_left
-            st.success(f"🎯 **{target_subject} 목표 달성 플랜:**")
-            st.metric(label="하루 권장 학습량", value=f"{daily_goal:.1f} 페이지 / 일")
-            st.write(f"오늘부터 매일 꾸준히 하시면 D-Day에 완벽하게 끝낼 수 있습니다!")
+        st.markdown('<span class="vibe-badge" style="color:#fee440;">STUDY PACEMAKER</span>', unsafe_allow_html=True)
+        st.header("🔥 D-Day 역산 갓생 플래너")
+        st.caption("막막한 시험 범위, 수학적으로 쪼개서 오늘 할 분량만 딱 알려드려요.")
 
-    # --- [Tab 3] 익명 고민 상담소 ---
+        col_a, col_b = st.columns(2)
+        with col_a:
+            target_subject = st.text_input("과목 / 프로젝트명", "수능 수학 기출")
+            days_left = st.number_input("D-Day까지 남은 일수", min_value=1, value=14)
+        with col_b:
+            total_pages = st.number_input("총 분량 (페이지/문제)", min_value=1, value=280)
+            done_pages = st.number_input("현재까지 완료한 분량", min_value=0, value=70)
+
+        if st.button("⚡ 나의 갓생 페이스 계산하기", use_container_width=True):
+            remain = max(0, total_pages - done_pages)
+            daily_goal = remain / days_left
+            progress = min(1.0, done_pages / total_pages)
+
+            st.markdown("### 📊 현재 달성률")
+            st.progress(progress)
+            st.write(f"전체 **{total_pages}** 중 **{done_pages}** 완료! (**{progress*100:.1f}%** 달성)")
+
+            st.metric(
+                label=f"🎯 [{target_subject}] 오늘의 필수 할당량",
+                value=f"{daily_goal:.1f} 개 / 일",
+                delta=f"남은 분량: {remain}"
+            )
+
+    # --- [3] 익명 고민 상담소 ---
     elif st.session_state.selected_menu == "고민 상담소":
-        st.header("🧠 마음 날씨 예보 (익명 고민 상담소)")
-        st.write("오늘 겪은 학업이나 인간관계 고민을 익명으로 털어놓고 따뜻한 위로를 받아보세요.")
-        
-        mood = st.selectbox("오늘 나의 기분 날씨는?", ["☀️ 맑음 (평온함)", "⛅ 구름 조금 (소소한 걱정)", "🌧️ 비 (지치고 힘듦)", "⚡ 천둥 번개 (스트레스 폭발)"])
-        worry_text = st.text_area("자세한 고민을 적어주세요 (익명 보장)")
-        
-        if st.button("마음 치유받기"):
-            if worry_text:
-                st.balloons()
-                st.info("💬 **마음 위로 봇의 메시지:**\n\n"
-                        "\"힘든 순간 속에서도 이렇게 기록하고 이겨내려 하는 모습 자체가 정말 멋져요. "
-                        "오늘 하루도 애썼으니, 너무 무리하지 말고 따뜻한 차 한 잔 마시며 쉬어가는 건 어떨까요? 당신의 내일을 응원합니다! 🌿\"")
-            else:
-                st.warning("고민 내용을 짧게라도 입력해 주세요!")
+        st.markdown('<span class="vibe-badge" style="color:#f15bb5;">MIND CARE</span>', unsafe_allow_html=True)
+        st.header("💜 마음 날씨 예보 (익명 고민 상담소)")
+        st.caption("아무도 모르게 털어놓는 오늘의 감정. 다 털어놓고 가볍게 나가세요.")
 
-    # --- [Tab 4] 팩트체크 리트머스 ---
-    elif st.session_state.selected_menu == "팩트체크":
-        st.header("🔍 미디어 팩트체크 리트머스")
-        st.write("인터넷 기사나 자극적인 문구를 입력해 자극성 및 객관성 지수를 분석해 보세요.")
-        
-        news_input = st.text_area("검증하고 싶은 문장이나 기사 제목을 입력하세요")
-        
-        if st.button("팩트체크 분석 실행"):
-            if news_input:
-                # 간단한 키워드 기반 시뮬레이션 로직
-                warning_keywords = ["대충격", "경악", "무조건", "절대", "전격", "폭발"]
-                found_keywords = [kw for kw in warning_keywords if kw in news_input]
-                
-                if found_keywords:
-                    st.warning(f"⚠️ **주의:** 자극적/선동성 표현({', '.join(found_keywords)})이 감지되었습니다.")
-                    st.metric(label="예상 객관성 지수", value="45% (주의 필요)")
-                    st.write("해당 문장은 감정적 어휘가 포함되어 있으므로, 원본 출처나 교차 검증을 통해 팩트를 다시 확인하는 것을 권장합니다.")
-                else:
-                    st.success("✅ 비교적 차분하고 객관적인 서술형 문장입니다.")
-                    st.metric(label="예상 객관성 지수", value="88% (양호)")
+        mood = st.select_slider(
+            "지금 내 마음의 기압은?",
+            options=["⚡ 번개 쾅쾅", "🌧️ 비 주룩주룩", "⛅ 구름 조금", "☀️ 맑고 화창", "🌈 무지개 뿜뿜"],
+            value="⛅ 구름 조금"
+        )
+        worry_text = st.text_area("오늘 어떤 일이 있었나요?", placeholder="성적, 친구 관계, 진로 고민 무엇이든 좋아요...")
+
+        if st.button("💌 위로 처방전 받기", use_container_width=True):
+            if worry_text.strip():
+                with st.spinner("마음 주파수를 맞추는 중..."):
+                    time.sleep(0.8)
+                st.balloons()
+                st.markdown(f"""
+                <div class="glass-card" style="border-color: #f15bb5;">
+                    <h4 style="color:#f15bb5; margin-top:0;">✨ 당신만을 위한 시크릿 처방전</h4>
+                    <p style="font-size:1.05rem; line-height:1.6;">
+                        "지금 느끼는 불안함이나 지침은 네가 그만큼 진심으로 잘해내고 싶다는 증거야. 
+                        잠시 숨 한 번 크게 쉬고, 좋아하는 노래 한 곡 들으면서 텐션 다시 끌어올리자! 
+                        넌 이미 충분히 잘하고 있어. 🎧💜"
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.warning("분석할 텍스트를 입력해 주세요!")
+                st.warning("짧게라도 마음을 적어주면 처방전을 드릴 수 있어요!")
+
+    # --- [4] 팩트체크 리트머스 ---
+    elif st.session_state.selected_menu == "팩트체크":
+        st.markdown('<span class="vibe-badge" style="color:#ff4d6d;">TRUTH DETECTOR</span>', unsafe_allow_html=True)
+        st.header("🚨 미디어 팩트체크 리트머스")
+        st.caption("자극적인 낚시성 기사나 루머, 어그로 지수를 판독해 드립니다.")
+
+        news_input = st.text_area("검증할 헤드라인이나 SNS 글을 붙여넣으세요", placeholder="예: [대충격] 내일부터 당장 이것 안 하면 무조건 손해본다?!")
+
+        if st.button("🔍 어그로 & 객관성 스캔 시작", use_container_width=True):
+            if news_input.strip():
+                warning_keywords = ["대충격", "경악", "무조건", "절대", "전격", "폭발", "충격", "실화", "미쳤다", "단독"]
+                found = [kw for kw in warning_keywords if kw in news_input]
+
+                score = max(15, 95 - len(found) * 20)
+                st.markdown("### 🧪 리트머스 판독 결과")
+                st.progress(score / 100)
+
+                if found:
+                    st.error(f"🚨 **어그로 경보 발령!** 자극적 키워드 감지: `{', '.join(found)}`")
+                    st.metric("객관성 신뢰 지수", f"{score}점 / 100점", delta="-주의 필요", delta_color="inverse")
+                    st.write("감정을 자극해 클릭을 유도하는 전형적인 표현이 섞여 있습니다. 원문 출처를 꼭 교차 검증하세요!")
+                else:
+                    st.success("✅ **클린 텍스트 판정!** 자극적인 선동 어휘가 발견되지 않았습니다.")
+                    st.metric("객관성 신뢰 지수", f"{score}점 / 100점", delta="+양호함")
+            else:
+                st.warning("판독할 문장을 먼저 입력해 주세요!")
