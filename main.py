@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 선반 격리 및 큼직한 아이콘 그리드 전용 CSS
+# 2. 개큰 아이콘 + 아래 작은 글씨 카드 전용 스타일 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -51,7 +51,6 @@ st.markdown("""
         margin-bottom: 12px;
     }
 
-    /* 홈 화면 버튼 스타일 */
     div.stButton > button {
         border-radius: 20px !important;
         padding: 1.4rem 1rem !important;
@@ -73,9 +72,7 @@ st.markdown("""
     .st-key-btn_fact button { background: linear-gradient(135deg, #ff4d6d 0%, #ff758f 100%) !important; color: #ffffff !important; }
     .st-key-btn_home button { background: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; font-size: 0.95rem !important; }
 
-    /* =========================================
-       🧊 냉장고 문 틀 및 선반 칸 구획 디자인
-       ========================================= */
+    /* 냉장고 프레임 박스 */
     .fridge-door-box {
         background: #e0f7fa;
         border: 5px solid #00bbf9;
@@ -103,50 +100,46 @@ st.markdown("""
         border-bottom: 3px dashed rgba(0,0,0,0.12);
     }
 
-    /* 선반 칸 하나하나를 명확히 구분하는 박스 */
     .shelf-compartment {
         background: #ffffff;
         border: 2px solid #cbd5e1;
         border-radius: 14px;
-        padding: 12px;
+        padding: 14px;
         margin-bottom: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
 
     .shelf-label {
-        font-size: 0.8rem;
-        font-weight: 800;
-        color: #475569;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+        font-weight: 900;
+        margin-bottom: 10px;
     }
 
-    /* 큼직한 아이콘과 밑에 작은 글자가 들어가는 푸드 카드 */
     .food-grid-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
     }
 
-    .big-icon-card {
+    /* 💥 개큰 음식 아이콘 카드 스타일 */
+    .giant-icon-card {
         background: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 10px 14px;
+        border: 2px solid #cbd5e1;
+        border-radius: 14px;
+        padding: 12px 16px;
         text-align: center;
-        min-width: 85px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+        min-width: 95px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
     }
 
-    .food-big-emoji {
-        font-size: 2.8rem; /* 아이콘 크게 강조 */
+    .food-giant-emoji {
+        font-size: 3rem; /* 진짜 개큰 아이콘 */
         display: block;
         margin-bottom: 4px;
     }
 
     .food-name-small {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 800;
         color: #1e293b;
         display: block;
@@ -159,8 +152,8 @@ st.markdown("""
         margin-bottom: 4px;
     }
 
-    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-top: 2px; }
-    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-top: 2px; }
+    .badge-urgent { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; }
+    .badge-safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; display: inline-block; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -249,7 +242,7 @@ else:
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
-        st.caption("선반 칸별로 큼직한 아이콘과 함께 직관적으로 정리된 인벤토리입니다.")
+        st.caption("선반 칸별로 개큰 아이콘과 아래 작은 글씨로 직관적인 인벤토리를 확인하세요.")
 
         # 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -280,7 +273,7 @@ else:
         # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def make_big_icon_cards(lst):
+        def make_giant_icon_cards(lst):
             if not lst:
                 return "<span style='color:#94a3b8; font-size:0.85rem;'>선반이 비어있습니다 🍃</span>"
             cards_html = ""
@@ -289,10 +282,10 @@ else:
                 badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
                 badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
                 cards_html += f"""
-                <div class="big-icon-card">
-                    <span class="food-big-emoji">{emoji}</span>
+                <div class="giant-icon-card">
+                    <span class="food-giant-emoji">{emoji}</span>
                     <span class="food-name-small">{it['name']}</span>
-                    <span class="food-qty-small">{it['qty']}개 보관</span>
+                    <span class="food-qty-small">{it['qty']}개</span>
                     <span class="{badge_class}">{badge_text}</span>
                 </div>
                 """
@@ -315,17 +308,17 @@ else:
                 
                 <div class="shelf-compartment">
                     <div class="shelf-label" style="color:#0284c7;">🥗 상단 칸 : 채소 · 과일</div>
-                    <div class="food-grid-container">{make_big_icon_cards(cat1)}</div>
+                    <div class="food-grid-container">{make_giant_icon_cards(cat1)}</div>
                 </div>
                 
                 <div class="shelf-compartment">
                     <div class="shelf-label" style="color:#d97706;">🧀 중단 칸 : 유제품 · 반찬</div>
-                    <div class="food-grid-container">{make_big_icon_cards(cat2)}</div>
+                    <div class="food-grid-container">{make_giant_icon_cards(cat2)}</div>
                 </div>
                 
                 <div class="shelf-compartment" style="margin-bottom:0;">
                     <div class="shelf-label" style="color:#e11d48;">🥩 하단 칸 : 육류 · 가공식품</div>
-                    <div class="food-grid-container">{make_big_icon_cards(cat3)}</div>
+                    <div class="food-grid-container">{make_giant_icon_cards(cat3)}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
