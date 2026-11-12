@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 애매한 도형 제거 및 스케치 맞춤형 깔끔한 CSS
+# 2. 전체 구역을 하나의 냉장고 문(도형)으로 깔끔하게 감싸는 CSS
 st.markdown("""
 <style>
     .stApp {
@@ -74,24 +74,33 @@ st.markdown("""
     .st-key-btn_home button { background: rgba(255, 255, 255, 0.2) !important; color: #ffffff !important; font-size: 0.95rem !important; }
 
     /* =========================================
-       🧊 깔끔한 냉장고/냉동실 프레임 (도형 제거 완료)
+       🧊 타이틀부터 음식 목록까지 전부 감싸는 완벽한 냉장고 문 틀
        ========================================= */
-    .fridge-sketch-box {
+    .fridge-door-box {
         background: #e0f7fa;
         border: 4px solid #00bbf9;
-        border-radius: 24px;
+        border-radius: 28px;
         padding: 24px;
         box-shadow: 0 15px 35px rgba(0, 188, 212, 0.25);
         color: #102a43;
     }
 
-    .freezer-sketch-box {
+    .freezer-door-box {
         background: #f1f5f9;
         border: 4px solid #94a3b8;
-        border-radius: 24px;
+        border-radius: 28px;
         padding: 24px;
         box-shadow: 0 15px 35px rgba(148, 163, 184, 0.25);
         color: #102a43;
+    }
+
+    .door-title {
+        font-size: 1.5rem;
+        font-weight: 900;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 3px dashed rgba(0,0,0,0.1);
     }
 
     .sketch-shelf {
@@ -207,7 +216,7 @@ else:
     if st.session_state.selected_menu == "냉장고 파먹기":
         st.markdown('<span class="vibe-badge">🧊 SMART FRIDGE & FREEZER</span>', unsafe_allow_html=True)
         st.header("🍳 스마트 냉장고 & 냉동실 파먹기")
-        st.caption("식재료를 입력하면 냉장실과 냉동실의 선반별로 깔끔하게 정리됩니다.")
+        st.caption("식재료를 입력하면 냉장실과 냉동실 문 안쪽에 선반별로 깔끔하게 정리됩니다.")
 
         # 입력 폼
         with st.form("fridge_form", clear_on_submit=True):
@@ -238,7 +247,23 @@ else:
         # 좌우 분할 (냉장실 vs 냉동실)
         col_fridge, col_freezer = st.columns(2, gap="medium")
 
-        def render_sketch_section(comp_type):
+        def make_chips(lst):
+            if not lst:
+                return "<span style='color:#94a3b8; font-size:0.85rem;'>비어있음 🍃</span>"
+            chips_html = ""
+            for it in lst:
+                emoji = get_food_emoji(it["name"])
+                badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
+                badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
+                chips_html += f"""
+                <div class="food-chip">
+                    {emoji}&nbsp;<b>{it['name']}</b>&nbsp;({it['qty']}개)
+                    <span class="{badge_class}">{badge_text}</span>
+                </div>
+                """
+            return chips_html
+
+        def render_door_section(comp_type):
             items = [i for i in st.session_state.fridge_items if i["type"] == comp_type]
             
             cat1 = [i for i in items if get_food_category(i["name"]) == "채소/과일/기타"]
@@ -246,51 +271,36 @@ else:
             cat3 = [i for i in items if get_food_category(i["name"]) == "육류/해산물/냉동식품"]
 
             title_text = "❄️ 냉장실 (3°C)" if comp_type == "냉장실" else "🧊 냉동실 (-18°C)"
-            title_color = "#0284c7" if comp_type == "냉장실" else "#475569"
-            
-            # 애매한 도형 없이 깔끔한 마크다운 헤더로 타이틀 적용
-            st.markdown(f"<h2 style='color:{title_color}; text-align:center; font-weight:900; margin-bottom:20px;'>{title_text}</h2>", unsafe_allow_html=True)
-            
-            def make_chips(lst):
-                if not lst:
-                    return "<span style='color:#94a3b8; font-size:0.85rem;'>비어있음 🍃</span>"
-                chips_html = ""
-                for it in lst:
-                    emoji = get_food_emoji(it["name"])
-                    badge_class = "badge-urgent" if it["days"] <= 3 else "badge-safe"
-                    badge_text = f"D-{it['days']} 임박" if it["days"] <= 3 else f"D-{it['days']}"
-                    chips_html += f"""
-                    <div class="food-chip">
-                        {emoji}&nbsp;<b>{it['name']}</b>&nbsp;({it['qty']}개)
-                        <span class="{badge_class}">{badge_text}</span>
-                    </div>
-                    """
-                return chips_html
+            title_color = "#0284c7" if comp_type == "냉장실" else "#334155"
+            box_class = "fridge-door-box" if comp_type == "냉장실" else "freezer-door-box"
 
+            # 하나의 큰 박스(문 틀) 안에 타이틀과 선반들이 모두 포함되도록 렌더링
             st.markdown(f"""
-            <div class="sketch-shelf">
-                <div style="font-size:0.85rem; font-weight:800; color:#0284c7; margin-bottom:8px;">🥗 상단 : 채소 · 과일</div>
-                {make_chips(cat1)}
-            </div>
-            <div class="sketch-shelf">
-                <div style="font-size:0.85rem; font-weight:800; color:#d97706; margin-bottom:8px;">🧀 중단 : 유제품 · 반찬</div>
-                {make_chips(cat2)}
-            </div>
-            <div class="sketch-shelf" style="margin-bottom:0;">
-                <div style="font-size:0.85rem; font-weight:800; color:#e11d48; margin-bottom:8px;">🥩 하단 : 육류 · 가공식품</div>
-                {make_chips(cat3)}
+            <div class="{box_class}">
+                <div class="door-title" style="color:{title_color};">{title_text}</div>
+                
+                <div class="sketch-shelf">
+                    <div style="font-size:0.85rem; font-weight:800; color:#0284c7; margin-bottom:8px;">🥗 상단 : 채소 · 과일</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat1)}</div>
+                </div>
+                
+                <div class="sketch-shelf">
+                    <div style="font-size:0.85rem; font-weight:800; color:#d97706; margin-bottom:8px;">🧀 중단 : 유제품 · 반찬</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat2)}</div>
+                </div>
+                
+                <div class="sketch-shelf" style="margin-bottom:0;">
+                    <div style="font-size:0.85rem; font-weight:800; color:#e11d48; margin-bottom:8px;">🥩 하단 : 육류 · 가공식품</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">{make_chips(cat3)}</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_fridge:
-            st.markdown('<div class="fridge-sketch-box">', unsafe_allow_html=True)
-            render_sketch_section("냉장실")
-            st.markdown('</div>', unsafe_allow_html=True)
+            render_door_section("냉장실")
 
         with col_freezer:
-            st.markdown('<div class="freezer-sketch-box">', unsafe_allow_html=True)
-            render_sketch_section("냉동실")
-            st.markdown('</div>', unsafe_allow_html=True)
+            render_door_section("냉동실")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
