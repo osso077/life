@@ -1,534 +1,304 @@
-
 import streamlit as st
 import time
 import random
-import re
+from datetime import date, datetime, timedelta
+from openai import OpenAI, OpenAIError
 
-# ==================================================
+# =========================================================
 # 1. 기본 설정
-# ==================================================
+# =========================================================
 
 st.set_page_config(
-    page_title="VIBE CHECK | 취향 치트키",
-    page_icon="⚡",
-    layout="wide"
+    page_title="VIBE CHECK",
+    page_icon="✨",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ==================================================
-# 2. 디자인
-# ==================================================
+# =========================================================
+# 2. 디자인 CSS
+# =========================================================
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
 
-.stApp {
-    background:
-        radial-gradient(circle at 10% 10%, rgba(0,245,212,.10), transparent 30%),
-        radial-gradient(circle at 90% 20%, rgba(155,93,229,.13), transparent 30%),
-        linear-gradient(135deg, #090b1c, #11152d 55%, #17142d);
-    color: #f7f7ff;
+html, body, [class*="css"] {
     font-family: 'Pretendard', sans-serif;
 }
 
-[data-testid="stHeader"] { background: transparent; }
+.stApp {
+    background:
+        radial-gradient(circle at 15% 10%, rgba(113, 75, 255, 0.18), transparent 30%),
+        radial-gradient(circle at 85% 80%, rgba(0, 220, 255, 0.12), transparent 30%),
+        #090b16;
+    color: #f5f5ff;
+}
 
 .block-container {
-    max-width: 1250px;
-    padding-top: 2.5rem;
-    padding-bottom: 4rem;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1200px;
 }
 
-h1, h2, h3, p, label { color: #f7f7ff; }
-
-h1, h2, h3 { font-weight: 900 !important; }
-
-.vibe-title {
-    font-size: 3.5rem;
-    line-height: 1.1;
-    font-weight: 900;
-    text-align: center;
-    letter-spacing: -2px;
-    background: linear-gradient(90deg, #00f5d4, #00bbf9, #c77dff, #ff70a6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+h1, h2, h3 {
+    color: #ffffff !important;
+    font-weight: 800 !important;
 }
 
-.vibe-subtitle {
-    text-align: center;
-    color: #b9c1e5;
-    font-size: 1.05rem;
-    margin-top: 12px;
-    margin-bottom: 35px;
+p, label, span, div {
+    color: inherit;
 }
 
-.eyebrow, .section-label {
-    color: #00f5d4;
-    font-size: .76rem;
-    font-weight: 900;
+[data-testid="stSidebar"] {
+    background: #101323;
+    border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+[data-testid="stSidebar"] * {
+    color: #f5f5ff !important;
+}
+
+.hero {
+    padding: 35px;
+    border-radius: 25px;
+    background: linear-gradient(
+        135deg,
+        rgba(118, 83, 255, 0.25),
+        rgba(24, 205, 255, 0.12)
+    );
+    border: 1px solid rgba(255,255,255,0.12);
+    margin-bottom: 25px;
+}
+
+.hero-small {
+    color: #b9b6ff;
+    font-size: 14px;
+    font-weight: 700;
     letter-spacing: 2px;
+}
+
+.hero-title {
+    font-size: 42px;
+    font-weight: 900;
+    margin-top: 8px;
+    color: white;
+}
+
+.hero-desc {
+    color: #c7c9df;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.glass-card {
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.stat-card {
+    background: linear-gradient(
+        145deg,
+        rgba(128, 101, 255, 0.2),
+        rgba(255,255,255,0.04)
+    );
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 30px;
+    font-weight: 900;
+    color: #a99aff;
+}
+
+.stat-label {
+    color: #c6c7dd;
+    font-size: 13px;
+}
+
+.section-label {
+    color: #a99aff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+}
+
+.fridge-door-box {
+    background: linear-gradient(145deg, #dff7fa, #bde8ed);
+    color: #17333b;
+    border-radius: 18px;
+    padding: 18px;
+    min-height: 130px;
+}
+
+.freezer-door-box {
+    background: linear-gradient(145deg, #f1f5f9, #dbeafe);
+    color: #1e293b;
+    border-radius: 18px;
+    padding: 18px;
+    min-height: 130px;
+}
+
+.fridge-door-box *,
+.freezer-door-box * {
+    color: #17333b !important;
+}
+
+.food-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 14px;
     margin-bottom: 10px;
 }
 
-.eyebrow {
-    text-align: center;
-    letter-spacing: 3px;
+.food-name {
+    font-size: 16px;
+    font-weight: 800;
 }
 
-.hero-card {
-    background: linear-gradient(120deg, rgba(0,245,212,.13), rgba(155,93,229,.15));
-    border: 1px solid rgba(0,245,212,.28);
-    border-radius: 26px;
-    padding: 28px;
-    margin: 12px 0 25px 0;
+.food-detail {
+    color: #b8bad0;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
-.hero-card p { color: #c5cbe7; margin-bottom: 0; }
+.urgent-badge {
+    display: inline-block;
+    background: rgba(255, 90, 110, 0.2);
+    color: #ff8796;
+    border: 1px solid rgba(255,90,110,0.35);
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.normal-badge {
+    display: inline-block;
+    background: rgba(90, 220, 170, 0.15);
+    color: #76e6bd;
+    border: 1px solid rgba(90,220,170,0.3);
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+}
 
 div.stButton > button {
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.14);
-    background: rgba(255,255,255,.08);
+    background: linear-gradient(135deg, #8065ff, #5c9dff);
     color: white !important;
-    font-weight: 800;
-    min-height: 46px;
-    transition: .2s;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 0.55rem 1rem;
+    transition: 0.2s;
 }
 
 div.stButton > button:hover {
-    border-color: #00f5d4;
-    color: #00f5d4 !important;
-    background: rgba(0,245,212,.10);
-    transform: translateY(-2px);
+    filter: brightness(1.15);
+    transform: translateY(-1px);
 }
 
-div.stButton > button[kind="primary"] {
-    background: linear-gradient(100deg, #00c9b7, #00a8e8);
-    border: none;
-    color: #071321 !important;
+div.stButton > button p {
+    color: white !important;
 }
 
 .stTextInput input,
-.stNumberInput input,
-.stTextArea textarea {
-    background-color: #202744 !important;
+.stTextArea textarea,
+.stNumberInput input {
+    background-color: #171b2d !important;
     color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #00f5d4 !important;
-    border: 1px solid #596487 !important;
-    border-radius: 12px !important;
+    border: 1px solid #414765 !important;
+    border-radius: 10px !important;
+    caret-color: #a99aff !important;
 }
 
 .stTextInput input::placeholder,
 .stTextArea textarea::placeholder {
-    color: #aab4d0 !important;
-    -webkit-text-fill-color: #aab4d0 !important;
-    opacity: 1 !important;
+    color: #9298b2 !important;
 }
 
 .stSelectbox div[data-baseweb="select"] > div {
-    background-color: #202744 !important;
-    color: #ffffff !important;
-    border-color: #596487 !important;
+    background-color: #171b2d !important;
+    color: white !important;
+    border-color: #414765 !important;
 }
 
-.stSelectbox div[data-baseweb="select"] span {
-    color: #ffffff !important;
+.stDateInput input {
+    background-color: #171b2d !important;
+    color: white !important;
+    border-color: #414765 !important;
 }
 
-[data-testid="stMetric"] {
-    background: rgba(255,255,255,.055);
-    border: 1px solid rgba(255,255,255,.12);
-    padding: 18px;
-    border-radius: 18px;
-}
-
-[data-testid="stMetricValue"] { color: #00f5d4; }
-
-[data-testid="stSidebar"] {
-    background: #0d1024;
-    border-right: 1px solid rgba(255,255,255,.10);
-}
-
-[data-testid="stSidebar"] * { color: #f7f7ff; }
-
-div[data-testid="stForm"] {
-    background: rgba(255,255,255,.045);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 20px;
-    padding: 20px;
-}
-
-[data-testid="stAlert"] { border-radius: 14px; }
-
-.recipe-card {
-    background: linear-gradient(135deg, rgba(255,255,255,.075), rgba(155,93,229,.08));
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: 20px;
-    padding: 22px;
-    margin-bottom: 15px;
-}
-
-.status-safe {
-    color: #00f5d4;
-    background: rgba(0,245,212,.10);
-    border: 1px solid rgba(0,245,212,.3);
-    padding: 4px 9px;
-    border-radius: 20px;
-    font-size: .75rem;
-    font-weight: 800;
+.stRadio label, .stCheckbox label {
+    color: #eeeeff !important;
 }
 
 .timer-display {
-    font-size: 4rem;
+    font-size: 76px;
     font-weight: 900;
     text-align: center;
-    color: #00f5d4;
-    letter-spacing: 4px;
+    color: #a99aff;
     padding: 20px;
+    letter-spacing: 3px;
+}
+
+.worry-card {
+    background: linear-gradient(
+        135deg,
+        rgba(130, 100, 255, 0.18),
+        rgba(40, 190, 255, 0.08)
+    );
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 22px;
+    padding: 28px;
+    line-height: 1.8;
+}
+
+div[data-testid="stMarkdownContainer"] {
+    color: #eeeeff;
+}
+
+hr {
+    border-color: rgba(255,255,255,0.1);
+}
+
+footer {
+    visibility: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==================================================
-# 3. 레시피 데이터베이스
-# ==================================================
-
-RECIPES = [
-    {
-        "name": "계란 볶음밥",
-        "emoji": "🍳",
-        "category": "한식",
-        "time": 10,
-        "difficulty": "쉬움",
-        "ingredients": ["계란", "밥", "대파"],
-        "extra": ["간장", "식용유"],
-        "description": "간단하지만 든든하게 먹을 수 있는 기본 볶음밥!",
-        "steps": [
-            "대파를 잘게 썰어 준비해 줘.",
-            "팬에 식용유를 두르고 대파를 볶아 향을 내 줘.",
-            "밥을 넣고 잘 풀어가며 볶아 줘.",
-            "계란을 넣고 밥과 골고루 섞어 줘.",
-            "간장으로 간을 맞추면 완성!"
-        ]
-    },
-    {
-        "name": "김치볶음밥",
-        "emoji": "🍚",
-        "category": "한식",
-        "time": 15,
-        "difficulty": "쉬움",
-        "ingredients": ["김치", "밥"],
-        "extra": ["참기름", "계란", "식용유"],
-        "description": "냉장고에 남은 김치를 활용하기 좋은 메뉴!",
-        "steps": [
-            "김치를 먹기 좋은 크기로 잘라 줘.",
-            "팬에 기름을 두르고 김치를 볶아 줘.",
-            "밥을 넣고 김치와 골고루 섞어 줘.",
-            "기호에 따라 참기름을 넣어 줘.",
-            "계란을 곁들이면 더욱 맛있어!"
-        ]
-    },
-    {
-        "name": "토마토 계란볶음",
-        "emoji": "🍅",
-        "category": "한식",
-        "time": 10,
-        "difficulty": "쉬움",
-        "ingredients": ["토마토", "계란"],
-        "extra": ["소금", "식용유"],
-        "description": "부드러운 계란과 상큼한 토마토의 조합!",
-        "steps": [
-            "토마토를 먹기 좋은 크기로 잘라 줘.",
-            "계란을 풀어 팬에서 부드럽게 익혀 줘.",
-            "토마토를 넣고 함께 볶아 줘.",
-            "소금으로 간을 맞추면 완성!"
-        ]
-    },
-    {
-        "name": "감자전",
-        "emoji": "🥔",
-        "category": "한식",
-        "time": 20,
-        "difficulty": "보통",
-        "ingredients": ["감자"],
-        "extra": ["소금", "식용유"],
-        "description": "감자 하나로도 도전할 수 있는 바삭한 메뉴!",
-        "steps": [
-            "감자를 깨끗하게 씻어 준비해 줘.",
-            "감자를 강판에 갈거나 잘게 갈아 줘.",
-            "소금으로 간을 해 줘.",
-            "팬에 기름을 두르고 앞뒤로 노릇하게 익혀 줘."
-        ]
-    },
-    {
-        "name": "참치마요 덮밥",
-        "emoji": "🍱",
-        "category": "한식",
-        "time": 10,
-        "difficulty": "쉬움",
-        "ingredients": ["참치", "밥"],
-        "extra": ["마요네즈", "간장", "김가루"],
-        "description": "요리 초보도 간단하게 만들 수 있는 한 그릇 메뉴!",
-        "steps": [
-            "참치의 기름을 적당히 제거해 줘.",
-            "밥을 그릇에 담아 줘.",
-            "참치를 밥 위에 올려 줘.",
-            "마요네즈와 간장을 기호에 맞게 곁들여 줘.",
-            "김가루를 뿌리면 완성!"
-        ]
-    },
-    {
-        "name": "베이컨 크림 파스타",
-        "emoji": "🍝",
-        "category": "양식",
-        "time": 20,
-        "difficulty": "보통",
-        "ingredients": ["베이컨", "우유", "치즈"],
-        "extra": ["파스타면", "마늘", "소금"],
-        "description": "우유와 치즈로 만드는 부드러운 크림 파스타!",
-        "steps": [
-            "파스타면을 포장지 안내에 따라 삶아 줘.",
-            "베이컨과 마늘을 먹기 좋은 크기로 준비해 줘.",
-            "팬에 베이컨과 마늘을 볶아 줘.",
-            "우유와 치즈를 넣고 소스를 만들어 줘.",
-            "삶은 면을 넣고 잘 섞어 주면 완성!"
-        ]
-    },
-    {
-        "name": "햄 계란말이",
-        "emoji": "🍳",
-        "category": "한식",
-        "time": 10,
-        "difficulty": "보통",
-        "ingredients": ["햄", "계란"],
-        "extra": ["소금", "식용유"],
-        "description": "간단한 반찬으로 활용하기 좋은 메뉴!",
-        "steps": [
-            "햄을 잘게 썰어 줘.",
-            "계란을 풀고 햄을 섞어 줘.",
-            "팬에 기름을 얇게 둘러 줘.",
-            "계란물을 조금씩 부어가며 말아 줘.",
-            "속까지 충분히 익히면 완성!"
-        ]
-    },
-    {
-        "name": "바나나 팬케이크",
-        "emoji": "🥞",
-        "category": "간식",
-        "time": 15,
-        "difficulty": "쉬움",
-        "ingredients": ["바나나", "계란"],
-        "extra": ["밀가루", "우유"],
-        "description": "달콤한 바나나를 활용한 간단한 간식!",
-        "steps": [
-            "바나나를 으깨 줘.",
-            "계란을 넣고 잘 섞어 줘.",
-            "기호에 따라 밀가루를 조금 넣어 줘.",
-            "팬에 반죽을 올리고 약한 불에서 익혀 줘.",
-            "앞뒤로 충분히 익히면 완성!"
-        ]
-    },
-    {
-        "name": "감자 치즈구이",
-        "emoji": "🧀",
-        "category": "간식",
-        "time": 20,
-        "difficulty": "쉬움",
-        "ingredients": ["감자", "치즈"],
-        "extra": ["소금", "버터"],
-        "description": "포슬포슬한 감자와 고소한 치즈의 조합!",
-        "steps": [
-            "감자를 깨끗하게 씻어 충분히 익혀 줘.",
-            "익은 감자를 먹기 좋은 크기로 나눠 줘.",
-            "치즈를 위에 올려 줘.",
-            "치즈가 녹을 때까지 익혀 줘."
-        ]
-    },
-    {
-        "name": "참치 김치찌개",
-        "emoji": "🍲",
-        "category": "한식",
-        "time": 25,
-        "difficulty": "보통",
-        "ingredients": ["참치", "김치"],
-        "extra": ["양파", "대파", "물"],
-        "description": "남은 김치와 참치로 만드는 든든한 찌개!",
-        "steps": [
-            "김치와 채소를 먹기 좋은 크기로 썰어 줘.",
-            "냄비에 김치를 넣고 가볍게 볶아 줘.",
-            "물을 넣고 충분히 끓여 줘.",
-            "참치와 채소를 넣어 더 끓여 줘.",
-            "재료가 충분히 익으면 완성!"
-        ]
-    },
-    {
-        "name": "우유 계란죽",
-        "emoji": "🥣",
-        "category": "간단식",
-        "time": 15,
-        "difficulty": "쉬움",
-        "ingredients": ["우유", "계란", "밥"],
-        "extra": ["소금", "치즈"],
-        "description": "부드럽고 따뜻하게 즐길 수 있는 한 그릇 메뉴!",
-        "steps": [
-            "냄비에 밥과 우유를 넣어 줘.",
-            "약한 불에서 저어가며 끓여 줘.",
-            "계란을 풀어 넣고 잘 섞어 줘.",
-            "소금으로 간을 맞춰 줘.",
-            "기호에 따라 치즈를 추가해 줘."
-        ]
-    },
-    {
-        "name": "햄 치즈 토스트",
-        "emoji": "🥪",
-        "category": "간식",
-        "time": 10,
-        "difficulty": "쉬움",
-        "ingredients": ["햄", "치즈", "빵"],
-        "extra": ["버터", "계란"],
-        "description": "아침 식사나 간식으로 좋은 간단 토스트!",
-        "steps": [
-            "빵 사이에 햄과 치즈를 넣어 줘.",
-            "팬에 버터를 녹여 줘.",
-            "토스트를 앞뒤로 노릇하게 구워 줘.",
-            "치즈가 녹으면 완성!"
-        ]
-    }
-]
-
-
-# ==================================================
-# 4. 재료 이름 인식 및 매칭
-# ==================================================
-
-INGREDIENT_ALIASES = {
-    "달걀": "계란",
-    "대파": "대파",
-    "파": "대파",
-    "밥": "밥",
-    "쌀밥": "밥",
-    "식빵": "빵",
-    "토스트": "빵",
-    "스팸": "햄",
-    "슬라이스햄": "햄",
-    "베이컨": "베이컨",
-    "모짜렐라치즈": "치즈",
-    "체다치즈": "치즈"
-}
-
-
-def normalize_ingredient(name):
-    name = name.strip().replace(" ", "")
-
-    if name in INGREDIENT_ALIASES:
-        return INGREDIENT_ALIASES[name]
-
-    return name
-
-
-def parse_ingredients(text):
-    raw_items = re.split(r"[,，\n;]+", text)
-
-    result = []
-
-    for item in raw_items:
-        clean = re.sub(r"[<>]", "", item.strip())
-
-        if clean:
-            normalized = normalize_ingredient(clean)
-
-            if normalized not in result:
-                result.append(normalized)
-
-    return result
-
-
-def ingredient_matches(required, available):
-    required = normalize_ingredient(required)
-
-    for item in available:
-        item = normalize_ingredient(item)
-
-        if required == item:
-            return True
-
-        if len(required) >= 2 and len(item) >= 2:
-            if required in item or item in required:
-                return True
-
-    return False
-
-
-def match_recipe(recipe, available):
-    matched = []
-    missing = []
-
-    for ingredient in recipe["ingredients"]:
-        if ingredient_matches(ingredient, available):
-            matched.append(ingredient)
-        else:
-            missing.append(ingredient)
-
-    score = len(matched) / len(recipe["ingredients"])
-
-    return matched, missing, score
-
-
-def recommend_recipes(available, category, max_time, difficulty):
-    results = []
-
-    for recipe in RECIPES:
-
-        if category != "전체" and recipe["category"] != category:
-            continue
-
-        if recipe["time"] > max_time:
-            continue
-
-        if difficulty != "전체" and recipe["difficulty"] != difficulty:
-            continue
-
-        matched, missing, score = match_recipe(recipe, available)
-
-        if matched:
-            results.append({
-                "recipe": recipe,
-                "matched": matched,
-                "missing": missing,
-                "score": score
-            })
-
-    results.sort(
-        key=lambda x: (
-            x["score"],
-            len(x["matched"]),
-            -len(x["missing"]),
-            -x["recipe"]["time"]
-        ),
-        reverse=True
-    )
-
-    return results
-
-
-# ==================================================
-# 5. 세션 상태
-# ==================================================
+# =========================================================
+# 3. 세션 데이터 초기화
+# =========================================================
 
 defaults = {
     "selected_menu": "홈",
+    "fridge_items": [],
     "recipe_results": None,
     "recipe_ingredients": "",
     "recipe_category": "전체",
     "recipe_max_time": 30,
     "recipe_difficulty": "전체",
+    "recipe_extra_request": "",
     "study_seconds": 25 * 60,
     "study_running": False,
-    "study_started_at": None,
+    "study_end_time": None,
     "study_subject": "수학",
-    "study_sessions": 0
+    "study_sessions": 0,
+    "study_total_seconds": 0,
+    "worry_text": "",
+    "fact_text": ""
 }
 
 for key, value in defaults.items():
@@ -536,635 +306,806 @@ for key, value in defaults.items():
         st.session_state[key] = value
 
 
-def navigate_to(menu):
-    st.session_state.selected_menu = menu
-    st.rerun()
+# =========================================================
+# 4. 공통 함수
+# =========================================================
+
+def go_to_page(page):
+    st.session_state.selected_menu = page
 
 
-# ==================================================
+def get_expiry_status(expiry):
+    today = date.today()
+    remaining = (expiry - today).days
+
+    if remaining < 0:
+        return "기간 지남", "urgent"
+    elif remaining <= 3:
+        return f"D-{remaining}", "urgent"
+    else:
+        return f"D-{remaining}", "normal"
+
+
+def format_time(seconds):
+    seconds = max(0, int(seconds))
+    minutes = seconds // 60
+    sec = seconds % 60
+    return f"{minutes:02d}:{sec:02d}"
+
+
+# =========================================================
+# 5. AI 레시피 생성 함수
+# =========================================================
+
+def generate_ai_recipes(
+    ingredients,
+    category,
+    max_time,
+    difficulty,
+    extra_request
+):
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        raise ValueError(
+            "OPENAI_API_KEY를 찾지 못했어. "
+            "Streamlit Secrets 설정을 확인해 줘."
+        )
+
+    if not api_key:
+        raise ValueError("API 키가 비어 있어.")
+
+    client = OpenAI(api_key=api_key)
+
+    instructions = """
+너는 사용자의 냉장고 재료를 활용해 현실적이고 맛있는 요리를 추천하는
+친절한 한국어 요리 도우미야.
+
+반드시 다음 조건을 지켜.
+
+1. 사용자가 입력한 재료를 최대한 활용해.
+2. 입력하지 않은 재료가 꼭 필요하다면 '추가로 필요한 재료'에 표시해.
+3. 집에서 구하기 쉬운 재료를 우선 사용해.
+4. 조리 시간과 난이도 조건을 지켜.
+5. 실제로 따라 할 수 있도록 조리 순서를 구체적으로 작성해.
+6. 재료의 양은 1인분 기준으로 안내해.
+7. 알레르기나 특별 요청이 있으면 반드시 고려해.
+8. 위험한 조리 방법이나 부정확한 식품 안전 정보를 안내하지 마.
+9. 레시피는 최소 2개, 최대 3개 추천해.
+10. 한국어로 친절하고 읽기 쉽게 작성해.
+
+각 레시피는 다음 형식을 사용해.
+
+## 🍳 요리 이름
+
+**한 줄 소개**
+
+- 예상 조리 시간:
+- 난이도:
+- 활용하는 재료:
+
+**추가로 필요한 재료**
+- 필요한 재료 또는 없음
+
+**조리 순서**
+1.
+2.
+3.
+
+**요리 팁**
+- 맛있게 만드는 팁
+
+마지막에는 가장 추천하는 요리 하나를 골라 이유를 설명해.
+"""
+
+    user_input = f"""
+사용 가능한 재료:
+{ingredients}
+
+원하는 음식 종류:
+{category}
+
+최대 조리 시간:
+{max_time}분
+
+난이도:
+{difficulty}
+
+추가 요청:
+{extra_request if extra_request else "특별한 요청 없음"}
+
+위 조건에 맞는 요리를 추천해 줘.
+"""
+
+    response = client.responses.create(
+        model="gpt-5.5",
+        instructions=instructions,
+        input=user_input
+    )
+
+    return response.output_text
+
+
+# =========================================================
 # 6. 사이드바
-# ==================================================
+# =========================================================
 
 with st.sidebar:
-
-    st.markdown(
-        '<div class="vibe-title" style="font-size:2rem;">VIBE CHECK</div>',
-        unsafe_allow_html=True
-    )
-
-    st.caption("YOUR PERSONAL LIFE HACK")
-    st.divider()
-
-    menus = [
-        ("🏠", "홈"),
-        ("🥑", "냉장고 파먹기"),
-        ("⏱️", "스터디 타이머"),
-        ("💜", "고민 상담소"),
-        ("🔎", "팩트체크")
-    ]
-
-    for icon, menu in menus:
-
-        if st.button(
-            f"{icon}  {menu}",
-            key=f"side_{menu}",
-            use_container_width=True,
-            type=(
-                "primary"
-                if st.session_state.selected_menu == menu
-                else "secondary"
-            )
-        ):
-            navigate_to(menu)
-
-    st.divider()
-    st.caption("⚡ YOUR SPACE. YOUR PACE.")
-
-
-# ==================================================
-# 7. 홈 화면
-# ==================================================
-
-if st.session_state.selected_menu == "홈":
-
-    st.markdown(
-        '<div class="eyebrow">⚡ YOUR PERSONAL LIFE HACK</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="vibe-title">VIBE CHECK</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="vibe-subtitle">나만의 취향 치트키 ⚡</div>',
-        unsafe_allow_html=True
-    )
-
     st.markdown("""
-    <div class="hero-card">
-        <div class="section-label">TODAY'S VIBE</div>
-        <h2>오늘 하루도 나답게, 가볍게 시작하기.</h2>
-        <p>먹고, 공부하고, 생각을 정리하는 나만의 작은 공간.</p>
+    <div style="padding: 15px 5px 25px 5px;">
+        <div style="font-size:13px; color:#a99aff; font-weight:800; letter-spacing:3px;">
+            YOUR DAILY SPACE
+        </div>
+        <div style="font-size:29px; font-weight:900; color:white;">
+            VIBE CHECK ✨
+        </div>
+        <div style="font-size:12px; color:#aeb2ca;">
+            오늘의 나를 체크하는 작은 공간
+        </div>
     </div>
     """, unsafe_allow_html=True)
-
-    st.markdown("### ✨ QUICK START")
-    st.caption("원하는 기능을 선택해 바로 시작해 봐.")
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-
-        with st.container(border=True):
-            st.markdown("## 🥑 냉장고 파먹기")
-            st.write("가지고 있는 재료로 만들 수 있는 요리를 찾아봐.")
-
-            if st.button("레시피 찾기 →", key="home_fridge", use_container_width=True):
-                navigate_to("냉장고 파먹기")
-
-        with st.container(border=True):
-            st.markdown("## 💜 고민 상담소")
-            st.write("마음속 이야기를 정리하고 잠깐 쉬어 가기.")
-
-            if st.button("마음 정리하기 →", key="home_worry", use_container_width=True):
-                navigate_to("고민 상담소")
-
-    with c2:
-
-        with st.container(border=True):
-            st.markdown("## ⏱️ 스터디 타이머")
-            st.write("오늘의 목표를 정하고 집중하는 시간 만들기.")
-
-            if st.button("집중 시작하기 →", key="home_study", use_container_width=True):
-                navigate_to("스터디 타이머")
-
-        with st.container(border=True):
-            st.markdown("## 🔎 팩트체크")
-            st.write("정보를 무작정 믿기 전에 한 번 더 확인하기.")
-
-            if st.button("검토하러 가기 →", key="home_fact", use_container_width=True):
-                navigate_to("팩트체크")
-
-
-# ==================================================
-# 8. 스마트 레시피 큐레이터
-# ==================================================
-
-elif st.session_state.selected_menu == "냉장고 파먹기":
-
-    st.markdown(
-        '<div class="section-label">SMART RECIPE CURATOR</div>',
-        unsafe_allow_html=True
-    )
-
-    st.title("🥑 냉장고 파먹기")
-
-    st.caption(
-        "냉장고 속 재료를 입력하면 만들 수 있는 요리를 찾아줄게."
-    )
-
-    st.markdown("""
-    <div class="hero-card">
-        <h2>오늘은 뭐 먹지? 🤔</h2>
-        <p>
-            가지고 있는 재료를 알려 줘!
-            재료에 맞는 레시피를 찾아볼게.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("### 🧺 STEP 01. 가지고 있는 재료")
-
-    with st.form("recipe_search_form"):
-
-        ingredients_text = st.text_area(
-            "냉장고 속 재료를 입력해 줘.",
-            value=st.session_state.recipe_ingredients,
-            placeholder="예: 계란, 양파, 대파, 밥, 김치",
-            height=110
-        )
-
-        st.caption("쉼표(,)로 구분해서 여러 재료를 입력할 수 있어.")
-
-        st.markdown("### 🍽️ STEP 02. 원하는 요리 조건")
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            category = st.selectbox(
-                "음식 종류",
-                ["전체", "한식", "양식", "간식", "간단식"],
-                index=[
-                    "전체", "한식", "양식", "간식", "간단식"
-                ].index(st.session_state.recipe_category)
-            )
-
-        with c2:
-            max_time = st.selectbox(
-                "조리 시간",
-                [10, 20, 30],
-                index=[10, 20, 30].index(
-                    st.session_state.recipe_max_time
-                ),
-                format_func=lambda x: f"{x}분 이내"
-            )
-
-        difficulty = st.selectbox(
-            "요리 난이도",
-            ["전체", "쉬움", "보통"]
-        )
-
-        search_submitted = st.form_submit_button(
-            "✨ 내 재료로 레시피 찾기",
-            type="primary",
-            use_container_width=True
-        )
-
-        if search_submitted:
-
-            available = parse_ingredients(ingredients_text)
-
-            if not available:
-                st.session_state.recipe_results = None
-                st.warning("재료를 한 가지 이상 입력해 줘!")
-
-            else:
-                st.session_state.recipe_ingredients = ingredients_text
-                st.session_state.recipe_category = category
-                st.session_state.recipe_max_time = max_time
-                st.session_state.recipe_difficulty = difficulty
-
-                st.session_state.recipe_results = recommend_recipes(
-                    available,
-                    category,
-                    max_time,
-                    difficulty
-                )
-
-                st.rerun()
-
-    # 추천 결과
-    if st.session_state.recipe_results is not None:
-
-        st.markdown("---")
-        st.markdown("### 🍳 YOUR RECIPE RESULTS")
-
-        available = parse_ingredients(
-            st.session_state.recipe_ingredients
-        )
-
-        results = st.session_state.recipe_results
-
-        if not results:
-
-            st.warning(
-                "조건에 맞는 레시피를 찾지 못했어."
-            )
-
-            st.info(
-                "재료를 더 추가하거나 조리 시간, 음식 종류, 난이도를 바꿔 봐!"
-            )
-
-        else:
-
-            st.success(
-                f"총 {len(results)}개의 레시피를 찾았어!"
-            )
-
-            st.caption(
-                "보유한 필수 재료가 많은 메뉴부터 보여주고 있어."
-            )
-
-            for index, result in enumerate(results[:8]):
-
-                recipe = result["recipe"]
-                matched = result["matched"]
-                missing = result["missing"]
-                score = result["score"]
-
-                with st.container(border=True):
-
-                    st.markdown(
-                        f"## {recipe['emoji']} {recipe['name']}"
-                    )
-
-                    st.caption(
-                        f"⏱️ {recipe['time']}분  ·  "
-                        f"난이도 {recipe['difficulty']}  ·  "
-                        f"{recipe['category']}"
-                    )
-
-                    st.write(recipe["description"])
-
-                    st.progress(score)
-
-                    st.caption(
-                        f"필수 재료 일치율: {int(score * 100)}%"
-                    )
-
-                    st.markdown("**🟢 가지고 있는 재료**")
-
-                    if matched:
-                        st.success(" · ".join(matched))
-
-                    st.markdown("**🛒 추가로 필요한 재료**")
-
-                    if missing:
-                        st.warning(" · ".join(missing))
-                    else:
-                        st.success("필수 재료가 모두 있어!")
-
-                    st.markdown("**🧂 선택 재료**")
-                    st.caption(" · ".join(recipe["extra"]))
-
-                    with st.expander("👩‍🍳 조리 방법 보기"):
-
-                        for step_num, step in enumerate(
-                            recipe["steps"], 1
-                        ):
-                            st.write(f"**{step_num}.** {step}")
-
-                        st.info(
-                            "조리 전 재료의 상태를 확인하고, "
-                            "고기와 계란 등은 충분히 익혀 먹어 줘!"
-                        )
-
-            st.caption(
-                "※ 추천 결과는 등록된 레시피 데이터베이스를 기준으로 계산해. "
-                "모든 재료가 일치하지 않아도 일부 재료가 일치하면 추천할 수 있어."
-            )
 
     st.markdown("---")
 
-    if st.button(
-        "↻ 재료 입력 초기화",
-        use_container_width=True
-    ):
-        st.session_state.recipe_ingredients = ""
-        st.session_state.recipe_results = None
-        st.rerun()
+    pages = [
+        ("홈", "🏠"),
+        ("냉장고 파먹기", "🧊"),
+        ("스터디 타이머", "⏳"),
+        ("고민 상담소", "💭"),
+        ("팩트체크", "🔎")
+    ]
 
-
-# ==================================================
-# 9. 스터디 타이머
-# ==================================================
-
-elif st.session_state.selected_menu == "스터디 타이머":
-
-    st.markdown(
-        '<div class="section-label">FOCUS MODE</div>',
-        unsafe_allow_html=True
-    )
-
-    st.title("⏱️ 스터디 타이머")
-    st.caption("완벽한 계획보다 지금 시작하는 시간이 더 중요해.")
-
-    subject = st.text_input(
-        "공부할 과목",
-        value=st.session_state.study_subject
-    )
-
-    st.session_state.study_subject = subject
-
-    timer_mode = st.selectbox(
-        "집중 시간",
-        ["25분 집중", "50분 집중", "15분 집중"]
-    )
-
-    duration_map = {
-        "25분 집중": 25 * 60,
-        "50분 집중": 50 * 60,
-        "15분 집중": 15 * 60
-    }
-
-    if not st.session_state.study_running:
-        st.session_state.study_seconds = duration_map[timer_mode]
-
-    if st.session_state.study_running:
-
-        elapsed = int(
-            time.time() - st.session_state.study_started_at
-        )
-
-        remaining = max(
-            0,
-            st.session_state.study_seconds - elapsed
-        )
-
-        if remaining == 0:
-
-            st.session_state.study_running = False
-            st.session_state.study_sessions += 1
-            st.session_state.study_started_at = None
-            st.session_state.study_seconds = duration_map[timer_mode]
-
-            st.success("🎉 집중 세션 완료! 잠깐 쉬어 가자.")
-
-    remaining = st.session_state.study_seconds
-
-    if st.session_state.study_running:
-
-        elapsed = int(
-            time.time() - st.session_state.study_started_at
-        )
-
-        remaining = max(
-            0,
-            st.session_state.study_seconds - elapsed
-        )
-
-    minutes = remaining // 60
-    seconds = remaining % 60
-
-    st.markdown(
-        f'<div class="timer-display">{minutes:02d}:{seconds:02d}</div>',
-        unsafe_allow_html=True
-    )
-
-    st.progress(
-        max(
-            0.0,
-            min(
-                1.0,
-                1 - remaining / duration_map[timer_mode]
-            )
-        )
-    )
-
-    st.caption(f"현재 목표: {st.session_state.study_subject}")
-
-    b1, b2 = st.columns(2)
-
-    with b1:
-
-        if not st.session_state.study_running:
-
-            if st.button(
-                "▶ 집중 시작",
-                type="primary",
-                use_container_width=True
-            ):
-                st.session_state.study_seconds = duration_map[timer_mode]
-                st.session_state.study_started_at = time.time()
-                st.session_state.study_running = True
-                st.rerun()
-
-        else:
-
-            if st.button(
-                "⏸ 일시 정지",
-                use_container_width=True
-            ):
-
-                elapsed = int(
-                    time.time() - st.session_state.study_started_at
-                )
-
-                st.session_state.study_seconds = max(
-                    0,
-                    st.session_state.study_seconds - elapsed
-                )
-
-                st.session_state.study_running = False
-                st.session_state.study_started_at = None
-                st.rerun()
-
-    with b2:
+    for page, emoji in pages:
+        selected = st.session_state.selected_menu == page
 
         if st.button(
-            "↻ 타이머 초기화",
-            use_container_width=True
+            f"{emoji}  {page}",
+            key=f"nav_{page}",
+            use_container_width=True,
+            type="primary" if selected else "secondary"
         ):
-            st.session_state.study_running = False
-            st.session_state.study_started_at = None
-            st.session_state.study_seconds = duration_map[timer_mode]
+            go_to_page(page)
             st.rerun()
 
     st.markdown("---")
 
-    st.metric(
-        "완료한 집중 세션",
-        f"{st.session_state.study_sessions}회"
+    st.caption("VIBE CHECK")
+    st.caption("Make today a little better.")
+
+
+# =========================================================
+# 7. 홈
+# =========================================================
+
+if st.session_state.selected_menu == "홈":
+
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-small">WELCOME TO YOUR SPACE</div>
+        <div class="hero-title">오늘의 VIBE CHECK ✨</div>
+        <div class="hero-desc">
+            오늘도 나만의 속도로, 조금씩 채워 나가면 돼.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    today = date.today()
+
+    st.markdown(f"""
+    <div style="color:#aaaec8; font-size:14px; margin-bottom:20px;">
+        📅 {today.strftime("%Y년 %m월 %d일")}
+    </div>
+    """, unsafe_allow_html=True)
+
+    fridge_count = len(st.session_state.fridge_items)
+    study_count = st.session_state.study_sessions
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">🧊 {fridge_count}</div>
+            <div class="stat-label">냉장고 재료</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">⏳ {study_count}</div>
+            <div class="stat-label">완료한 공부 세션</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="stat-card">
+            <div class="stat-number">✨</div>
+            <div class="stat-label">오늘도 잘하고 있어</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("### 오늘의 공간")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-size:30px;">🧊</div>
+            <h3>냉장고 파먹기</h3>
+            <p style="color:#b8bad0;">
+                냉장고 속 재료를 확인하고 AI에게 새로운 요리를 추천받아 봐.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("냉장고 열어보기 →", key="home_fridge"):
+            go_to_page("냉장고 파먹기")
+            st.rerun()
+
+    with col2:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-size:30px;">⏳</div>
+            <h3>스터디 타이머</h3>
+            <p style="color:#b8bad0;">
+                잠깐의 집중이 쌓여 큰 성취가 되는 시간.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("공부 시작하기 →", key="home_timer"):
+            go_to_page("스터디 타이머")
+            st.rerun()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-size:30px;">💭</div>
+            <h3>고민 상담소</h3>
+            <p style="color:#b8bad0;">
+                마음속에 담아둔 생각을 정리해 보는 공간.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("고민 이야기하기 →", key="home_worry"):
+            go_to_page("고민 상담소")
+            st.rerun()
+
+    with col2:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-size:30px;">🔎</div>
+            <h3>팩트체크</h3>
+            <p style="color:#b8bad0;">
+                정보의 출처와 근거를 한 번 더 생각해 보기.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("팩트체크 하러 가기 →", key="home_fact"):
+            go_to_page("팩트체크")
+            st.rerun()
+
+
+# =========================================================
+# 8. 냉장고 파먹기
+# =========================================================
+
+elif st.session_state.selected_menu == "냉장고 파먹기":
+
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-small">FRIDGE MANAGEMENT</div>
+        <div class="hero-title">냉장고 파먹기 🧊</div>
+        <div class="hero-desc">
+            냉장고 속 재료를 관리하고, AI와 함께 새로운 요리를 만들어 봐.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 냉장고 현황은 이 페이지 안에서만 표시
+    st.markdown("### 🧊 냉장고 현황")
+
+    items = st.session_state.fridge_items
+
+    fridge_count = sum(
+        1 for item in items if item.get("storage", "냉장") == "냉장"
+    )
+    freezer_count = sum(
+        1 for item in items if item.get("storage", "냉장") == "냉동"
     )
 
+    col1, col2 = st.columns(2)
 
-# ==================================================
+    with col1:
+        st.markdown(f"""
+        <div class="fridge-door-box">
+            <div style="font-size:27px;">🥬 냉장실</div>
+            <div style="font-size:34px; font-weight:900;">{fridge_count}개</div>
+            <div style="font-size:12px;">신선한 재료를 보관하는 공간</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="freezer-door-box">
+            <div style="font-size:27px;">🧊 냉동실</div>
+            <div style="font-size:34px; font-weight:900;">{freezer_count}개</div>
+            <div style="font-size:12px;">오래 보관할 재료를 모아두는 공간</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 재료 추가
+    st.markdown("### ➕ 재료 추가하기")
+
+    with st.form("add_food_form", clear_on_submit=True):
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            food_name = st.text_input(
+                "재료 이름",
+                placeholder="예: 계란, 양파, 우유"
+            )
+
+            food_quantity = st.text_input(
+                "수량 또는 메모",
+                placeholder="예: 3개, 반 봉지"
+            )
+
+        with col2:
+            food_storage = st.selectbox(
+                "보관 위치",
+                ["냉장", "냉동"]
+            )
+
+            food_expiry = st.date_input(
+                "소비기한 또는 확인 날짜",
+                value=date.today() + timedelta(days=7)
+            )
+
+        add_food = st.form_submit_button(
+            "재료 추가하기",
+            use_container_width=True
+        )
+
+        if add_food:
+            if food_name.strip():
+                st.session_state.fridge_items.append({
+                    "name": food_name.strip(),
+                    "quantity": food_quantity.strip() or "수량 미입력",
+                    "storage": food_storage,
+                    "expiry": food_expiry
+                })
+                st.success(f"{food_name} 재료를 추가했어!")
+                st.rerun()
+            else:
+                st.warning("재료 이름을 입력해 줘.")
+
+    # 재료 목록
+    st.markdown("---")
+    st.markdown("### 🥗 보관 중인 재료")
+
+    if not st.session_state.fridge_items:
+        st.info("아직 등록된 재료가 없어. 위에서 재료를 추가해 봐!")
+    else:
+        for i, item in enumerate(st.session_state.fridge_items):
+
+            status_text, status_type = get_expiry_status(item["expiry"])
+
+            badge_class = (
+                "urgent-badge"
+                if status_type == "urgent"
+                else "normal-badge"
+            )
+
+            col1, col2 = st.columns([5, 1])
+
+            with col1:
+                st.markdown(f"""
+                <div class="food-card">
+                    <div class="food-name">
+                        {item["name"]}
+                        <span class="{badge_class}">{status_text}</span>
+                    </div>
+                    <div class="food-detail">
+                        {item["storage"]} 보관 · {item["quantity"]}
+                        · 날짜: {item["expiry"]}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col2:
+                if st.button("삭제", key=f"delete_food_{i}"):
+                    st.session_state.fridge_items.pop(i)
+                    st.rerun()
+
+    # AI 레시피
+    st.markdown("---")
+
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-small">AI RECIPE STUDIO</div>
+        <div style="font-size:28px; font-weight:900; color:white;">
+            오늘은 뭘 먹을까? 🍳
+        </div>
+        <div class="hero-desc">
+            가지고 있는 재료를 입력하면 AI가 그때그때 새로운 레시피를 만들어 줘.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    saved_ingredients = ", ".join(
+        item["name"] for item in st.session_state.fridge_items
+    )
+
+    with st.form("ai_recipe_form"):
+
+        ingredients = st.text_area(
+            "사용할 재료",
+            value=saved_ingredients,
+            placeholder="예: 계란, 양파, 밥, 김치, 참치",
+            height=110
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            category = st.selectbox(
+                "원하는 음식 종류",
+                ["전체", "한식", "양식", "중식", "일식", "간식", "간단식"]
+            )
+
+            max_time = st.selectbox(
+                "최대 조리 시간",
+                [10, 20, 30, 60],
+                index=2,
+                format_func=lambda x: f"{x}분 이내"
+            )
+
+        with col2:
+            difficulty = st.selectbox(
+                "요리 난이도",
+                ["전체", "쉬움", "보통"]
+            )
+
+            extra_request = st.text_input(
+                "추가 요청",
+                placeholder="예: 매콤하게, 설거지 적게, 밥 종류"
+            )
+
+        generate_button = st.form_submit_button(
+            "✨ AI 레시피 생성하기",
+            use_container_width=True
+        )
+
+    if generate_button:
+
+        if not ingredients.strip():
+            st.warning("사용할 재료를 먼저 입력해 줘.")
+        else:
+            with st.spinner("AI가 재료를 살펴보고 레시피를 만드는 중이야..."):
+
+                try:
+                    result = generate_ai_recipes(
+                        ingredients=ingredients,
+                        category=category,
+                        max_time=max_time,
+                        difficulty=difficulty,
+                        extra_request=extra_request
+                    )
+
+                    st.session_state.recipe_results = result
+
+                except ValueError as e:
+                    st.error(str(e))
+
+                except OpenAIError as e:
+                    st.error(
+                        "AI 요청 중 오류가 발생했어. "
+                        "API 사용 가능 여부나 계정 설정을 확인해 줩."
+                    )
+
+                except Exception as e:
+                    st.error(
+                        "예상하지 못한 오류가 발생했어. "
+                        "Streamlit 로그를 확인해 줘."
+                    )
+
+    if st.session_state.recipe_results:
+        st.markdown("---")
+        st.markdown("### 🍽️ AI가 추천한 오늘의 레시피")
+
+        st.markdown(
+            st.session_state.recipe_results
+        )
+
+
+# =========================================================
+# 9. 스터디 타이머
+# =========================================================
+
+elif st.session_state.selected_menu == "스터디 타이머":
+
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-small">FOCUS TIME</div>
+        <div class="hero-title">스터디 타이머 ⏳</div>
+        <div class="hero-desc">
+            지금 이 순간에 집중해 봐. 작은 집중이 모여 큰 성취가 돼.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 📚 공부 설정")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        subject = st.selectbox(
+            "공부 과목",
+            ["수학", "국어", "영어", "과학", "사회", "기타"],
+            index=["수학", "국어", "영어", "과학", "사회", "기타"].index(
+                st.session_state.study_subject
+            )
+        )
+
+    with col2:
+        study_minutes = st.selectbox(
+            "집중 시간",
+            [15, 25, 30, 45, 50, 60],
+            index=1
+        )
+
+    st.session_state.study_subject = subject
+
+    if not st.session_state.study_running:
+        if st.button("⏳ 타이머 시작하기", use_container_width=True):
+            st.session_state.study_seconds = study_minutes * 60
+            st.session_state.study_end_time = time.time() + (
+                study_minutes * 60
+            )
+            st.session_state.study_running = True
+            st.rerun()
+
+    else:
+        if st.button("⏸️ 일시정지하기", use_container_width=True):
+            remaining = max(
+                0,
+                int(st.session_state.study_end_time - time.time())
+            )
+            st.session_state.study_seconds = remaining
+            st.session_state.study_running = False
+            st.session_state.study_end_time = None
+            st.rerun()
+
+    if st.session_state.study_running:
+
+        remaining = max(
+            0,
+            int(st.session_state.study_end_time - time.time())
+        )
+
+        if remaining <= 0:
+            st.session_state.study_running = False
+            st.session_state.study_end_time = None
+            st.session_state.study_sessions += 1
+            st.session_state.study_total_seconds += study_minutes * 60
+            st.session_state.study_seconds = 0
+            st.success("🎉 집중 시간 완료! 정말 수고했어.")
+            st.rerun()
+
+        st.markdown(
+            f'<div class="timer-display">{format_time(remaining)}</div>',
+            unsafe_allow_html=True
+        )
+
+        time.sleep(1)
+        st.rerun()
+
+    else:
+        st.markdown(
+            f'<div class="timer-display">{format_time(st.session_state.study_seconds)}</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown("---")
+    st.markdown("### 📊 나의 공부 기록")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            "완료한 공부 세션",
+            f'{st.session_state.study_sessions}회'
+        )
+
+    with col2:
+        total_minutes = st.session_state.study_total_seconds // 60
+        st.metric(
+            "누적 공부 시간",
+            f"{total_minutes}분"
+        )
+
+    if st.button("타이머 초기화"):
+        st.session_state.study_running = False
+        st.session_state.study_end_time = None
+        st.session_state.study_seconds = 25 * 60
+        st.rerun()
+
+
+# =========================================================
 # 10. 고민 상담소
-# ==================================================
+# =========================================================
 
 elif st.session_state.selected_menu == "고민 상담소":
 
-    st.markdown(
-        '<div class="section-label">MIND CARE SPACE</div>',
-        unsafe_allow_html=True
-    )
-
-    st.title("💜 익명 고민 상담소")
-
-    st.caption(
-        "정답을 찾지 않아도 괜찮아. 먼저 마음속 이야기를 정리해 보자."
-    )
-
     st.markdown("""
-    <div class="hero-card">
-        <h2>오늘 마음은 어떤 날씨야?</h2>
-        <p>여기서는 완벽하게 말하지 않아도 괜찮아.</p>
+    <div class="hero">
+        <div class="hero-small">YOUR LITTLE SAFE SPACE</div>
+        <div class="hero-title">고민 상담소 💭</div>
+        <div class="hero-desc">
+            어떤 생각이든 잠시 내려놓고 정리해 보는 공간이야.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    mood = st.select_slider(
-        "지금 기분을 골라 봐.",
-        options=[
-            "많이 지침",
-            "조금 우울함",
-            "그냥 그래",
-            "괜찮음",
-            "기분 좋음"
-        ]
+    st.markdown("""
+    <div class="worry-card">
+        <div style="font-size:26px;">☁️ 잠깐 쉬어가도 괜찮아.</div>
+        <p style="color:#d4d3ee;">
+            모든 일을 완벽하게 해낼 필요는 없어.
+            오늘의 마음을 천천히 들여다보자.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 지금 어떤 생각이 들어?")
+
+    worry_text = st.text_area(
+        "고민을 자유롭게 적어 봐",
+        value=st.session_state.worry_text,
+        placeholder="정리되지 않은 생각이어도 괜찮아.",
+        height=160
     )
 
-    worry = st.text_area(
-        "하고 싶은 이야기를 적어 줘.",
-        placeholder="무슨 일이 있었는지 천천히 적어 봐.",
-        height=180
-    )
+    if st.button("마음 정리하기", use_container_width=True):
+        st.session_state.worry_text = worry_text
 
-    if st.button(
-        "내 마음 정리하기",
-        type="primary",
-        use_container_width=True
-    ):
-
-        if not worry.strip():
-
-            st.warning("마음속 이야기를 한 줄이라도 적어 봐.")
-
-        else:
-
+        if worry_text.strip():
             messages = [
-                "지금 느끼는 감정은 틀린 게 아니야. 스스로를 너무 몰아붙이지 않았으면 좋겠어.",
-                "모든 일을 오늘 다 해결하지 않아도 괜찮아. 하나씩 정리해도 충분해.",
-                "다른 사람의 속도와 비교하지 말고, 지금 할 수 있는 만큼만 해도 괜찮아.",
-                "힘든 마음을 말로 꺼내는 것도 용기가 필요한 일이야. 이야기해 줘서 고마워."
+                "지금 느끼는 감정을 억지로 없애려고 하지 않아도 괜찮아. 우선 어떤 마음인지 알아차리는 것부터 시작해 보자.",
+                "한 번에 모든 문제를 해결하지 않아도 돼. 지금 할 수 있는 가장 작은 일 하나만 생각해 보자.",
+                "네가 느끼는 감정에는 나름의 이유가 있을 수 있어. 스스로를 너무 몰아붙이지 않았으면 좋겠어.",
+                "오늘 하루를 버텨낸 것만으로도 의미가 있어. 잠깐 쉬어 가도 괜찮아.",
+                "혼자 정리하기 어려운 고민이라면 믿을 수 있는 사람에게 이야기해 보는 것도 좋은 방법이야."
             ]
 
             st.markdown("---")
-            st.markdown("### 🌷 오늘의 작은 응원")
+            st.markdown("### 💌 오늘의 작은 응원")
 
-            st.success(random.choice(messages))
-
-            st.caption(f"선택한 오늘의 기분: {mood}")
-
-            st.info(
-                "이 공간은 생각을 정리하는 데 도움을 주기 위한 곳이야. "
-                "마음이 오래 힘들거나 혼자 감당하기 어렵다면 믿을 수 있는 어른에게도 이야기해 줘."
+            st.markdown(
+                f"""
+                <div class="worry-card">
+                    <div style="font-size:18px; line-height:1.8;">
+                        {random.choice(messages)}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
+            st.caption(
+                "이 공간은 생각을 정리하는 데 도움을 주기 위한 곳이야. "
+                "힘든 일이 계속된다면 믿을 수 있는 어른에게도 이야기해 줘."
+            )
 
-# ==================================================
+        else:
+            st.warning("먼저 마음속 이야기를 적어 줘.")
+
+    if st.button("작성한 고민 지우기"):
+        st.session_state.worry_text = ""
+        st.rerun()
+
+
+# =========================================================
 # 11. 팩트체크
-# ==================================================
+# =========================================================
 
 elif st.session_state.selected_menu == "팩트체크":
 
-    st.markdown(
-        '<div class="section-label">TRUTH CHECK LAB</div>',
-        unsafe_allow_html=True
-    )
-
-    st.title("🔎 팩트체크")
-
-    st.caption(
-        "자극적인 문장일수록 한 번 더 확인하는 습관!"
-    )
-
     st.markdown("""
-    <div class="hero-card">
-        <h2>잠깐, 이 정보 정말 사실일까?</h2>
-        <p>문장을 입력하고 확인해야 할 부분을 정리해 보자.</p>
+    <div class="hero">
+        <div class="hero-small">THINK BEFORE YOU BELIEVE</div>
+        <div class="hero-title">팩트체크 🔎</div>
+        <div class="hero-desc">
+            정보를 그대로 믿기 전에 한 번 더 확인해 보자.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    claim = st.text_area(
-        "확인하고 싶은 문장",
-        placeholder="인터넷에서 본 정보나 기사 제목을 입력해 봐.",
+    st.markdown("""
+    <div class="glass-card">
+        <h3>🧠 정보 확인하기</h3>
+        <p style="color:#b8bad0;">
+            확인하고 싶은 문장이나 정보를 입력하면
+            기본적인 확인 포인트를 알려 줄게.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    fact_text = st.text_area(
+        "확인하고 싶은 내용을 입력해 줘.",
+        placeholder="예: 인터넷에서 본 정보나 뉴스의 주장 등을 입력해 봐.",
         height=150
     )
 
-    if st.button(
-        "🔍 문장 점검하기",
-        type="primary",
-        use_container_width=True
-    ):
+    if st.button("확인 포인트 보기", use_container_width=True):
 
-        if not claim.strip():
-
-            st.warning("먼저 확인하고 싶은 문장을 입력해 줘.")
+        if not fact_text.strip():
+            st.warning("확인할 내용을 입력해 줘.")
 
         else:
-
-            warning_words = [
-                "무조건",
-                "100%",
-                "절대",
-                "충격",
-                "비밀",
-                "전부",
-                "완벽하게",
-                "확실히"
-            ]
-
-            found_words = [
-                word for word in warning_words
-                if word in claim
-            ]
-
             st.markdown("---")
-            st.markdown("### 🧪 점검 결과")
+            st.markdown("### 🔍 확인할 때 살펴볼 점")
+
+            st.markdown("""
+            <div class="glass-card">
+                <h4>1. 출처 확인</h4>
+                <p style="color:#c5c7dc;">
+                    누가 작성했는지, 믿을 만한 기관이나 전문가의 정보인지 확인해 봐.
+                </p>
+            </div>
+
+            <div class="glass-card">
+                <h4>2. 날짜 확인</h4>
+                <p style="color:#c5c7dc;">
+                    오래된 정보가 현재도 맞는 내용인지 살펴봐.
+                </p>
+            </div>
+
+            <div class="glass-card">
+                <h4>3. 다른 자료와 비교</h4>
+                <p style="color:#c5c7dc;">
+                    서로 독립적인 여러 출처에서도 같은 내용을 확인할 수 있는지 살펴봐.
+                </p>
+            </div>
+
+            <div class="glass-card">
+                <h4>4. 근거 확인</h4>
+                <p style="color:#c5c7dc;">
+                    단순한 의견인지, 실제 자료나 연구 결과를 근거로 한 주장인지 구분해 봐.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
             st.info(
-                "이 기능은 문장의 표현을 점검하는 간단한 보조 도구야. "
-                "실제 사실 여부를 판정하거나 인터넷 자료를 확인한 결과는 아니야."
+                "현재 팩트체크는 정보 확인 방법을 안내하는 보조 기능이야. "
+                "입력한 문장의 사실 여부를 실시간으로 검증하는 기능은 아니야."
             )
 
-            if found_words:
 
-                st.warning(
-                    "확인해 볼 표현: " + ", ".join(found_words)
-                )
-
-            else:
-
-                st.success(
-                    "특별히 등록된 과장 표현은 발견되지 않았어."
-                )
-
-            st.markdown("#### 직접 확인해 볼 체크리스트")
-
-            st.write("- 작성자와 출처가 명확한가?")
-            st.write("- 작성 날짜가 최근인가?")
-            st.write("- 다른 신뢰할 만한 자료에서도 같은 내용을 확인할 수 있는가?")
-            st.write("- 사실과 개인의 의견이 구분되어 있는가?")
-
-            st.markdown("#### 입력한 문장")
-            st.write(claim)
-
-
-# ==================================================
-# 12. 공통 푸터
-# ==================================================
+# =========================================================
+# 12. 공통 하단
+# =========================================================
 
 st.markdown("---")
 
 st.markdown("""
-<div style="text-align:center; padding:15px 0; color:#858eaf;">
-    <div style="font-weight:900; letter-spacing:2px; color:#00f5d4;">
-        VIBE CHECK ⚡
-    </div>
-    <div style="font-size:.78rem; margin-top:7px;">
-        YOUR SPACE. YOUR PACE. YOUR VIBE.
-    </div>
+<div style="
+    text-align:center;
+    padding:20px;
+    color:#777c9e;
+    font-size:12px;
+">
+    ✨ VIBE CHECK · Make today a little better.
 </div>
 """, unsafe_allow_html=True)
