@@ -9,9 +9,9 @@ from supabase import create_client
 from streamlit_cookies_controller import CookieController
 
 
-# =========================================================
+# =====================================================
 # 1. 기본 설정
-# =========================================================
+# =====================================================
 
 st.set_page_config(
     page_title="FRIDGE MATE",
@@ -21,9 +21,9 @@ st.set_page_config(
 )
 
 
-# =========================================================
-# 2. 디자인 CSS - C. 미니멀 화이트
-# =========================================================
+# =====================================================
+# 2. 디자인
+# =====================================================
 
 st.markdown("""
 <style>
@@ -53,19 +53,82 @@ p {
     color: #68736A;
 }
 
+/* 사이드바 */
 [data-testid="stSidebar"] {
     background: #FFFFFF;
     border-right: 1px solid #E8ECE7;
 }
 
 [data-testid="stSidebar"] * {
-    color: #344237 !important;
+    font-family: 'Pretendard', sans-serif;
 }
 
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #778278 !important;
+    color: #778278;
 }
 
+/* 사이드바 버튼 기본 스타일 */
+[data-testid="stSidebar"] div.stButton > button {
+    width: 100%;
+    min-height: 43px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all .2s ease;
+}
+
+/* 선택되지 않은 버튼 */
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] {
+    background: #FFFFFF !important;
+    border: 1px solid #E7ECE5 !important;
+    color: #536653 !important;
+}
+
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] p {
+    color: #536653 !important;
+}
+
+/* 선택된 버튼 */
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+    background: #71896B !important;
+    border: 1px solid #71896B !important;
+    color: #FFFFFF !important;
+}
+
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] p {
+    color: #FFFFFF !important;
+}
+
+/* 사이드바 버튼 내부 모든 텍스트 */
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] *,
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] p {
+    color: #FFFFFF !important;
+}
+
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] *,
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] p {
+    color: #536653 !important;
+}
+
+/* 메인 버튼 */
+div.stButton > button {
+    background: #71896B;
+    color: #FFFFFF !important;
+    border: 1px solid #71896B;
+    border-radius: 11px;
+    font-weight: 700;
+}
+
+div.stButton > button p {
+    color: #FFFFFF !important;
+}
+
+div.stButton > button:hover {
+    background: #5E7758;
+    border-color: #5E7758;
+}
+
+/* 메인 영역 */
 .hero {
     background: linear-gradient(120deg, #FFFFFF, #EEF3EA);
     border: 1px solid #E7ECE3;
@@ -95,20 +158,11 @@ p {
     margin-top: 10px;
 }
 
-.section-title {
-    color: #394A3C;
-    font-size: 21px;
-    font-weight: 800;
-    margin-top: 24px;
-    margin-bottom: 15px;
-}
-
 .stat-card {
     background: #FFFFFF;
     border: 1px solid #E9EDE7;
     border-radius: 18px;
     padding: 21px;
-    text-align: left;
     min-height: 115px;
     box-shadow: 0 3px 12px rgba(40,60,40,.025);
 }
@@ -125,21 +179,13 @@ p {
     margin-top: 5px;
 }
 
-.content-card {
+.content-card, .food-card, .quick-card {
     background: #FFFFFF;
     border: 1px solid #E9EDE7;
     border-radius: 18px;
-    padding: 21px;
+    padding: 19px;
     margin-bottom: 13px;
     box-shadow: 0 3px 12px rgba(40,60,40,.025);
-}
-
-.food-card {
-    background: #FFFFFF;
-    border: 1px solid #E8EDE5;
-    border-radius: 16px;
-    padding: 17px;
-    margin-bottom: 11px;
 }
 
 .food-name {
@@ -174,14 +220,6 @@ p {
     font-weight: 800;
 }
 
-.quick-card {
-    background: #FFFFFF;
-    border: 1px solid #E8EDE5;
-    border-radius: 18px;
-    padding: 19px;
-    min-height: 145px;
-}
-
 .quick-icon {
     font-size: 27px;
 }
@@ -199,35 +237,6 @@ p {
     margin-top: 5px;
 }
 
-div.stButton > button {
-    background: #71896B;
-    color: white !important;
-    border: 1px solid #71896B;
-    border-radius: 11px;
-    font-weight: 700;
-    transition: .2s;
-}
-
-div.stButton > button:hover {
-    background: #5E7758;
-    border-color: #5E7758;
-    color: white !important;
-}
-
-div.stButton > button p {
-    color: white !important;
-}
-
-div.stButton > button[kind="secondary"] {
-    background: #FFFFFF;
-    color: #566B53 !important;
-    border: 1px solid #E3E9DF;
-}
-
-div.stButton > button[kind="secondary"] p {
-    color: #566B53 !important;
-}
-
 .stTextInput input,
 .stTextArea textarea,
 .stNumberInput input,
@@ -238,20 +247,10 @@ div.stButton > button[kind="secondary"] p {
     border-radius: 10px !important;
 }
 
-.stTextInput input:focus,
-.stTextArea textarea:focus {
-    border-color: #8BA584 !important;
-}
-
 .stSelectbox div[data-baseweb="select"] > div {
     background: #FFFFFF !important;
     color: #344237 !important;
     border-color: #DDE5D9 !important;
-}
-
-.stRadio label,
-.stCheckbox label {
-    color: #536253 !important;
 }
 
 [data-testid="stMetric"] {
@@ -287,11 +286,9 @@ footer {
     .hero {
         padding: 23px;
     }
-
     .hero-title {
         font-size: 29px;
     }
-
     .block-container {
         padding-top: 1rem;
     }
@@ -300,9 +297,9 @@ footer {
 """, unsafe_allow_html=True)
 
 
-# =========================================================
-# 3. 기본 데이터
-# =========================================================
+# =====================================================
+# 3. 세션 상태
+# =====================================================
 
 DEFAULT_DATA = {
     "fridge_items": [],
@@ -333,14 +330,13 @@ if "supabase_user_id" not in st.session_state:
     st.session_state.supabase_user_id = None
 
 
-# =========================================================
-# 4. 쿠키 및 Supabase 연결
-# =========================================================
+# =====================================================
+# 4. Supabase 연결 및 데이터 저장
+# =====================================================
 
-def get_cookie_data():
+def get_cookie_controller():
     try:
-        controller = CookieController()
-        return controller
+        return CookieController()
     except Exception:
         return None
 
@@ -351,10 +347,10 @@ def connect_supabase():
         key = st.secrets["SUPABASE_KEY"]
 
         client = create_client(url, key)
-        controller = get_cookie_data()
+        controller = get_cookie_controller()
 
         if controller is None:
-            raise RuntimeError("브라우저 쿠키를 불러오지 못했어.")
+            raise RuntimeError("쿠키 컨트롤러 연결 실패")
 
         cookie_value = controller.get("fridge_mate_session")
         session = None
@@ -367,12 +363,12 @@ def connect_supabase():
                     else cookie_value
                 )
 
-                session_response = client.auth.set_session(
+                response = client.auth.set_session(
                     saved["access_token"],
                     saved["refresh_token"]
                 )
 
-                session = session_response.session
+                session = response.session
 
             except Exception:
                 session = None
@@ -382,7 +378,7 @@ def connect_supabase():
             session = response.session
 
         if session is None:
-            raise RuntimeError("익명 사용자 세션 생성에 실패했어.")
+            raise RuntimeError("익명 로그인에 실패했어.")
 
         controller.set(
             "fridge_mate_session",
@@ -397,32 +393,6 @@ def connect_supabase():
     except Exception as e:
         st.session_state.cloud_error = str(e)
         return None, None
-
-
-def save_cookie_session():
-    client = st.session_state.supabase_client
-
-    if not client:
-        return
-
-    try:
-        session_response = client.auth.get_session()
-        session = session_response
-
-        if session:
-            controller = get_cookie_data()
-
-            if controller:
-                controller.set(
-                    "fridge_mate_session",
-                    json.dumps({
-                        "access_token": session.access_token,
-                        "refresh_token": session.refresh_token
-                    })
-                )
-
-    except Exception:
-        pass
 
 
 def serialize_data():
@@ -473,6 +443,29 @@ def load_data(client, user_id):
     st.session_state.data_loaded = True
 
 
+def save_cookie_session():
+    try:
+        client = st.session_state.supabase_client
+        if not client:
+            return
+
+        session = client.auth.get_session()
+
+        if session:
+            controller = get_cookie_controller()
+
+            if controller:
+                controller.set(
+                    "fridge_mate_session",
+                    json.dumps({
+                        "access_token": session.access_token,
+                        "refresh_token": session.refresh_token
+                    })
+                )
+    except Exception:
+        pass
+
+
 def save_data():
     client = st.session_state.supabase_client
     user_id = st.session_state.supabase_user_id
@@ -517,9 +510,9 @@ if not st.session_state.data_loaded:
         st.session_state.data_loaded = True
 
 
-# =========================================================
+# =====================================================
 # 5. 공통 함수
-# =========================================================
+# =====================================================
 
 def expiry_days(expiry):
     if isinstance(expiry, str):
@@ -550,9 +543,9 @@ def open_page(page):
     st.rerun()
 
 
-# =========================================================
-# 6. AI 레시피
-# =========================================================
+# =====================================================
+# 6. AI 레시피 생성
+# =====================================================
 
 def generate_ai_recipes(
     ingredients,
@@ -561,15 +554,10 @@ def generate_ai_recipes(
     difficulty,
     extra_request
 ):
-    try:
-        api_key = st.secrets["OPENAI_API_KEY"]
-    except Exception:
-        raise ValueError(
-            "OPENAI_API_KEY가 없어. Streamlit Secrets를 확인해 줘."
-        )
+    api_key = st.secrets.get("OPENAI_API_KEY")
 
     if not api_key:
-        raise ValueError("OpenAI API 키가 비어 있어.")
+        raise ValueError("OPENAI_API_KEY를 확인해 줘.")
 
     client = OpenAI(api_key=api_key)
 
@@ -579,14 +567,14 @@ def generate_ai_recipes(
 사용자의 냉장고 재료를 최대한 활용해서 현실적인 요리를 추천해.
 
 반드시 지켜야 할 규칙:
-1. 사용자가 가진 재료를 최대한 활용한다.
+1. 가진 재료를 최대한 활용한다.
 2. 없는 재료는 추가 재료로 구분한다.
 3. 조리 시간과 난이도를 지킨다.
 4. 재료 양은 1인분 기준으로 알려준다.
-5. 초보자도 이해할 수 있도록 조리 과정을 자세히 쓴다.
-6. 대체 재료가 있으면 함께 안내한다.
+5. 초보자도 이해할 수 있게 조리 과정을 설명한다.
+6. 대체 재료가 있으면 알려준다.
 7. 알레르기와 특별 요청을 고려한다.
-8. 식품 안전에 관한 내용을 함부로 단정하지 않는다.
+8. 식품 안전을 함부로 단정하지 않는다.
 9. 2~3개의 레시피를 추천한다.
 10. 모든 답변은 한국어로 작성한다.
 
@@ -614,7 +602,7 @@ def generate_ai_recipes(
 ### 요리 팁
 맛있게 만드는 팁
 
-마지막에는 가장 추천하는 요리와 그 이유를 알려줘.
+마지막에는 가장 추천하는 요리와 이유를 알려줘.
 """
 
     user_input = f"""
@@ -634,9 +622,9 @@ def generate_ai_recipes(
     return response.output_text
 
 
-# =========================================================
+# =====================================================
 # 7. 사이드바
-# =========================================================
+# =====================================================
 
 pages = [
     ("대시보드", "🏠"),
@@ -648,29 +636,11 @@ pages = [
 ]
 
 with st.sidebar:
-    st.markdown("""
-    <div style="padding:15px 5px 25px;">
-        <div style="
-            color:#8A9D83;
-            font-size:11px;
-            font-weight:800;
-            letter-spacing:3px;
-        ">SMART KITCHEN</div>
 
-        <div style="
-            color:#354A38;
-            font-size:27px;
-            font-weight:900;
-            margin-top:5px;
-        ">FRIDGE MATE 🥬</div>
-
-        <div style="
-            color:#929D91;
-            font-size:12px;
-            margin-top:5px;
-        ">나만의 작은 키친 매니저</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # HTML 대신 Streamlit 기본 텍스트 사용
+    st.caption("S M A R T   K I T C H E N")
+    st.title("FRIDGE MATE 🥬")
+    st.caption("나만의 작은 키친 매니저")
 
     st.divider()
 
@@ -692,34 +662,12 @@ with st.sidebar:
     else:
         st.warning("☁️ 저장 연결 확인 필요")
 
-    st.caption("FRIDGE MATE")
     st.caption("Fresh food, better days.")
 
 
-# =========================================================
-# 8. 공통 상단 헤더
-# =========================================================
-
-st.markdown("""
-<div style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-">
-    <div style="
-        color:#82927F;
-        font-size:12px;
-        font-weight:800;
-        letter-spacing:2px;
-    ">MY PERSONAL KITCHEN</div>
-</div>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# 9. 대시보드
-# =========================================================
+# =====================================================
+# 8. 대시보드
+# =====================================================
 
 if st.session_state.selected_menu == "대시보드":
 
@@ -742,14 +690,11 @@ if st.session_state.selected_menu == "대시보드":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(
-        f"<p style='font-size:13px;color:#929D91;'>📅 {date.today().strftime('%Y년 %m월 %d일')}</p>",
-        unsafe_allow_html=True
-    )
+    st.caption(f"📅 {date.today().strftime('%Y년 %m월 %d일')}")
 
     st.markdown("### Kitchen Overview")
 
-    col1, col2, col3, col4 = st.columns(4)
+    cols = st.columns(4)
 
     stats = [
         ("🥬", len(items), "보관 중인 재료"),
@@ -758,9 +703,7 @@ if st.session_state.selected_menu == "대시보드":
         ("📖", len(recipes), "저장한 레시피")
     ]
 
-    for col, (emoji, number, label) in zip(
-        [col1, col2, col3, col4], stats
-    ):
+    for col, (emoji, number, label) in zip(cols, stats):
         with col:
             st.markdown(f"""
             <div class="stat-card">
@@ -797,15 +740,15 @@ if st.session_state.selected_menu == "대시보드":
 
     st.markdown("### ✨ Quick Access")
 
-    col1, col2, col3 = st.columns(3)
+    cols = st.columns(3)
 
     quick_items = [
-        (col1, "🥬", "냉장고 관리", "새로운 재료를 등록해 보세요.", "내 냉장고"),
-        (col2, "🍳", "AI 레시피", "오늘의 요리를 추천받아 보세요.", "AI 레시피"),
-        (col3, "🛒", "장보기 목록", "필요한 재료를 정리해 보세요.", "장보기 목록")
+        ("🥬", "냉장고 관리", "새로운 재료를 등록해 보세요.", "내 냉장고"),
+        ("🍳", "AI 레시피", "오늘의 요리를 추천받아 보세요.", "AI 레시피"),
+        ("🛒", "장보기 목록", "필요한 재료를 정리해 보세요.", "장보기 목록")
     ]
 
-    for col, icon, title, desc, page in quick_items:
+    for col, (icon, title, desc, page) in zip(cols, quick_items):
         with col:
             st.markdown(f"""
             <div class="quick-card">
@@ -825,10 +768,9 @@ if st.session_state.selected_menu == "대시보드":
     st.markdown("### 🥗 냉장고 미리보기")
 
     if items:
-        preview = items[:4]
         cols = st.columns(4)
 
-        for col, item in zip(cols, preview):
+        for col, item in zip(cols, items[:4]):
             with col:
                 st.markdown(f"""
                 <div class="content-card">
@@ -846,9 +788,9 @@ if st.session_state.selected_menu == "대시보드":
         st.info("아직 냉장고가 비어 있어요. 첫 번째 재료를 등록해 보세요!")
 
 
-# =========================================================
-# 10. 내 냉장고
-# =========================================================
+# =====================================================
+# 9. 내 냉장고
+# =====================================================
 
 elif st.session_state.selected_menu == "내 냉장고":
 
@@ -864,13 +806,11 @@ elif st.session_state.selected_menu == "내 냉장고":
 
     items = st.session_state.fridge_items
 
-    col1, col2, col3 = st.columns(3)
-
-    storage_types = ["냉장", "냉동", "실온"]
+    cols = st.columns(3)
 
     for col, storage, emoji in zip(
-        [col1, col2, col3],
-        storage_types,
+        cols,
+        ["냉장", "냉동", "실온"],
         ["🥗", "🧊", "🥔"]
     ):
         count = sum(1 for x in items if x["storage"] == storage)
@@ -891,10 +831,7 @@ elif st.session_state.selected_menu == "내 냉장고":
         col1, col2 = st.columns(2)
 
         with col1:
-            name = st.text_input(
-                "재료 이름 *",
-                placeholder="예: 계란"
-            )
+            name = st.text_input("재료 이름 *", placeholder="예: 계란")
 
             category = st.selectbox(
                 "카테고리",
@@ -911,10 +848,7 @@ elif st.session_state.selected_menu == "내 냉장고":
             )
 
         with col2:
-            storage = st.selectbox(
-                "보관 장소",
-                ["냉장", "냉동", "실온"]
-            )
+            storage = st.selectbox("보관 장소", ["냉장", "냉동", "실온"])
 
             purchase_date = st.date_input(
                 "구매 날짜",
@@ -953,7 +887,7 @@ elif st.session_state.selected_menu == "내 냉장고":
 
                 save_and_refresh()
 
-    st.markdown("---")
+    st.divider()
     st.markdown("### 🧺 보관 중인 재료")
 
     filter_storage = st.selectbox(
@@ -1023,8 +957,8 @@ elif st.session_state.selected_menu == "내 냉장고":
 
                     new_storage = st.selectbox(
                         "보관 장소",
-                        storage_types,
-                        index=storage_types.index(item["storage"])
+                        ["냉장", "냉동", "실온"],
+                        index=["냉장", "냉동", "실온"].index(item["storage"])
                     )
 
                     new_purchase = st.date_input(
@@ -1070,9 +1004,9 @@ elif st.session_state.selected_menu == "내 냉장고":
                     save_and_refresh()
 
 
-# =========================================================
-# 11. 소비기한 관리
-# =========================================================
+# =====================================================
+# 10. 소비기한 관리
+# =====================================================
 
 elif st.session_state.selected_menu == "소비기한 관리":
 
@@ -1093,10 +1027,10 @@ elif st.session_state.selected_menu == "소비기한 관리":
     soon = [x for x in items if 1 <= expiry_days(x["expiry"]) <= 3]
     later = [x for x in items if expiry_days(x["expiry"]) > 3]
 
-    col1, col2, col3, col4 = st.columns(4)
+    cols = st.columns(4)
 
     for col, title, count in zip(
-        [col1, col2, col3, col4],
+        cols,
         ["날짜 지남", "오늘", "3일 이내", "여유 있음"],
         [len(expired), len(today_items), len(soon), len(later)]
     ):
@@ -1117,10 +1051,7 @@ elif st.session_state.selected_menu == "소비기한 관리":
             st.caption("해당하는 재료가 없어요.")
             continue
 
-        for item in sorted(
-            group,
-            key=lambda x: expiry_days(x["expiry"])
-        ):
+        for item in sorted(group, key=lambda x: expiry_days(x["expiry"])):
             status, badge = expiry_status(item["expiry"])
 
             st.markdown(f"""
@@ -1146,9 +1077,9 @@ elif st.session_state.selected_menu == "소비기한 관리":
     )
 
 
-# =========================================================
-# 12. AI 레시피
-# =========================================================
+# =====================================================
+# 11. AI 레시피
+# =====================================================
 
 elif st.session_state.selected_menu == "AI 레시피":
 
@@ -1163,8 +1094,7 @@ elif st.session_state.selected_menu == "AI 레시피":
     """, unsafe_allow_html=True)
 
     saved_ingredients = ", ".join(
-        item["name"]
-        for item in st.session_state.fridge_items
+        item["name"] for item in st.session_state.fridge_items
     )
 
     st.markdown("### 🥬 요리 조건 설정")
@@ -1239,14 +1169,13 @@ elif st.session_state.selected_menu == "AI 레시피":
 
     if st.session_state.recipe_results:
 
-        st.markdown("---")
+        st.divider()
         st.markdown("### 🍽️ 오늘의 추천 레시피")
 
-        st.markdown(
-            st.session_state.recipe_results
-        )
+        st.markdown(st.session_state.recipe_results)
 
         if st.button("💚 이 레시피 모음 저장하기"):
+
             already_saved = any(
                 recipe["content"] == st.session_state.recipe_results
                 for recipe in st.session_state.saved_recipes
@@ -1265,9 +1194,9 @@ elif st.session_state.selected_menu == "AI 레시피":
                 st.info("이미 저장한 레시피예요!")
 
 
-# =========================================================
-# 13. 장보기 목록
-# =========================================================
+# =====================================================
+# 12. 장보기 목록
+# =====================================================
 
 elif st.session_state.selected_menu == "장보기 목록":
 
@@ -1315,7 +1244,7 @@ elif st.session_state.selected_menu == "장보기 목록":
             else:
                 st.warning("재료 이름을 입력해 주세요.")
 
-    st.markdown("---")
+    st.divider()
     st.markdown("### 🧺 구매할 재료")
 
     groceries = st.session_state.grocery_items
@@ -1358,7 +1287,7 @@ elif st.session_state.selected_menu == "장보기 목록":
 
         done_count = sum(1 for x in groceries if x["done"])
 
-        st.markdown("---")
+        st.divider()
         st.progress(done_count / len(groceries))
         st.caption(f"{done_count} / {len(groceries)}개 구매 완료")
 
@@ -1369,9 +1298,9 @@ elif st.session_state.selected_menu == "장보기 목록":
             save_and_refresh()
 
 
-# =========================================================
-# 14. 나의 요리책
-# =========================================================
+# =====================================================
+# 13. 나의 요리책
+# =====================================================
 
 elif st.session_state.selected_menu == "나의 요리책":
 
@@ -1410,11 +1339,11 @@ elif st.session_state.selected_menu == "나의 요리책":
                     save_and_refresh()
 
 
-# =========================================================
-# 15. 하단
-# =========================================================
+# =====================================================
+# 14. 하단
+# =====================================================
 
-st.markdown("---")
+st.divider()
 
 st.markdown("""
 <div style="
