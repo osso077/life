@@ -1,7 +1,6 @@
 
 import streamlit as st
 import json
-import html
 import uuid
 from datetime import date, datetime, timedelta
 from openai import OpenAI, OpenAIError
@@ -22,7 +21,7 @@ st.set_page_config(
 
 
 # =====================================================
-# 2. 디자인
+# 2. 디자인 CSS
 # =====================================================
 
 st.markdown("""
@@ -45,7 +44,7 @@ html, body, [class*="css"] {
 }
 
 h1, h2, h3, h4 {
-    color: #29352D !important;
+    color: #354A38 !important;
     font-weight: 800 !important;
 }
 
@@ -59,25 +58,15 @@ p {
     border-right: 1px solid #E8ECE7;
 }
 
-[data-testid="stSidebar"] * {
-    font-family: 'Pretendard', sans-serif;
-}
-
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #778278;
-}
-
-/* 사이드바 버튼 기본 스타일 */
 [data-testid="stSidebar"] div.stButton > button {
     width: 100%;
     min-height: 43px;
     border-radius: 11px;
     font-size: 14px;
     font-weight: 700;
-    transition: all .2s ease;
 }
 
-/* 선택되지 않은 버튼 */
+/* 선택되지 않은 사이드바 버튼 */
 [data-testid="stSidebar"] div.stButton > button[kind="secondary"] {
     background: #FFFFFF !important;
     border: 1px solid #E7ECE5 !important;
@@ -88,7 +77,7 @@ p {
     color: #536653 !important;
 }
 
-/* 선택된 버튼 */
+/* 선택된 사이드바 버튼 */
 [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
     background: #71896B !important;
     border: 1px solid #71896B !important;
@@ -99,19 +88,9 @@ p {
     color: #FFFFFF !important;
 }
 
-/* 사이드바 버튼 내부 모든 텍스트 */
-[data-testid="stSidebar"] div.stButton > button[kind="primary"] *,
-[data-testid="stSidebar"] div.stButton > button[kind="primary"] p {
-    color: #FFFFFF !important;
-}
-
-[data-testid="stSidebar"] div.stButton > button[kind="secondary"] *,
-[data-testid="stSidebar"] div.stButton > button[kind="secondary"] p {
-    color: #536653 !important;
-}
-
 /* 메인 버튼 */
-div.stButton > button {
+div.stButton > button,
+div.stFormSubmitButton > button {
     background: #71896B;
     color: #FFFFFF !important;
     border: 1px solid #71896B;
@@ -119,124 +98,25 @@ div.stButton > button {
     font-weight: 700;
 }
 
-div.stButton > button p {
+div.stButton > button p,
+div.stFormSubmitButton > button p {
     color: #FFFFFF !important;
 }
 
-div.stButton > button:hover {
+div.stButton > button:hover,
+div.stFormSubmitButton > button:hover {
     background: #5E7758;
     border-color: #5E7758;
 }
 
-/* 메인 영역 */
-.hero {
-    background: linear-gradient(120deg, #FFFFFF, #EEF3EA);
-    border: 1px solid #E7ECE3;
-    border-radius: 24px;
-    padding: 34px;
-    margin-bottom: 26px;
-}
-
-.hero-small {
-    color: #80957B;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 2px;
-}
-
-.hero-title {
-    color: #354A38;
-    font-size: 38px;
-    font-weight: 900;
-    margin-top: 10px;
-    line-height: 1.3;
-}
-
-.hero-desc {
-    color: #788579;
-    font-size: 15px;
-    margin-top: 10px;
-}
-
-.stat-card {
+/* 카드 */
+[data-testid="stVerticalBlockBorderWrapper"] {
     background: #FFFFFF;
-    border: 1px solid #E9EDE7;
-    border-radius: 18px;
-    padding: 21px;
-    min-height: 115px;
-    box-shadow: 0 3px 12px rgba(40,60,40,.025);
+    border: 1px solid #E8EDE5;
+    border-radius: 16px;
 }
 
-.stat-number {
-    color: #617B5B;
-    font-size: 30px;
-    font-weight: 900;
-}
-
-.stat-label {
-    color: #879187;
-    font-size: 13px;
-    margin-top: 5px;
-}
-
-.content-card, .food-card, .quick-card {
-    background: #FFFFFF;
-    border: 1px solid #E9EDE7;
-    border-radius: 18px;
-    padding: 19px;
-    margin-bottom: 13px;
-    box-shadow: 0 3px 12px rgba(40,60,40,.025);
-}
-
-.food-name {
-    color: #39483A;
-    font-size: 17px;
-    font-weight: 800;
-}
-
-.food-detail {
-    color: #849087;
-    font-size: 12px;
-    margin-top: 7px;
-}
-
-.badge-urgent {
-    display: inline-block;
-    background: #FFF0EC;
-    color: #C76B55;
-    border-radius: 20px;
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.badge-normal {
-    display: inline-block;
-    background: #EDF4E9;
-    color: #64805D;
-    border-radius: 20px;
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.quick-icon {
-    font-size: 27px;
-}
-
-.quick-title {
-    font-size: 16px;
-    font-weight: 800;
-    color: #435644;
-    margin-top: 9px;
-}
-
-.quick-desc {
-    font-size: 12px;
-    color: #849087;
-    margin-top: 5px;
-}
-
+/* 입력창 */
 .stTextInput input,
 .stTextArea textarea,
 .stNumberInput input,
@@ -253,6 +133,7 @@ div.stButton > button:hover {
     border-color: #DDE5D9 !important;
 }
 
+/* 메트릭 */
 [data-testid="stMetric"] {
     background: #FFFFFF;
     border: 1px solid #E9EDE7;
@@ -264,6 +145,7 @@ div.stButton > button:hover {
     color: #607B59;
 }
 
+/* 확장 영역 */
 [data-testid="stExpander"] {
     background: #FFFFFF;
     border: 1px solid #E8EDE5;
@@ -281,24 +163,12 @@ hr {
 footer {
     visibility: hidden;
 }
-
-@media (max-width: 768px) {
-    .hero {
-        padding: 23px;
-    }
-    .hero-title {
-        font-size: 29px;
-    }
-    .block-container {
-        padding-top: 1rem;
-    }
-}
 </style>
 """, unsafe_allow_html=True)
 
 
 # =====================================================
-# 3. 세션 상태
+# 3. 세션 상태 초기화
 # =====================================================
 
 DEFAULT_DATA = {
@@ -331,7 +201,7 @@ if "supabase_user_id" not in st.session_state:
 
 
 # =====================================================
-# 4. Supabase 연결 및 데이터 저장
+# 4. Supabase 연결
 # =====================================================
 
 def get_cookie_controller():
@@ -395,6 +265,10 @@ def connect_supabase():
         return None, None
 
 
+# =====================================================
+# 5. 데이터 저장 및 불러오기
+# =====================================================
+
 def serialize_data():
     items = []
 
@@ -446,6 +320,7 @@ def load_data(client, user_id):
 def save_cookie_session():
     try:
         client = st.session_state.supabase_client
+
         if not client:
             return
 
@@ -462,6 +337,7 @@ def save_cookie_session():
                         "refresh_token": session.refresh_token
                     })
                 )
+
     except Exception:
         pass
 
@@ -493,7 +369,9 @@ def save_and_refresh():
     st.rerun()
 
 
+# 최초 연결 및 데이터 불러오기
 if not st.session_state.data_loaded:
+
     client, user_id = connect_supabase()
 
     st.session_state.supabase_client = client
@@ -503,15 +381,17 @@ if not st.session_state.data_loaded:
         try:
             load_data(client, user_id)
             st.session_state.cloud_ready = True
+
         except Exception as e:
             st.session_state.cloud_error = str(e)
             st.session_state.data_loaded = True
+
     else:
         st.session_state.data_loaded = True
 
 
 # =====================================================
-# 5. 공통 함수
+# 6. 공통 함수
 # =====================================================
 
 def expiry_days(expiry):
@@ -525,17 +405,15 @@ def expiry_status(expiry):
     remaining = expiry_days(expiry)
 
     if remaining < 0:
-        return "날짜 지남", "badge-urgent"
-    elif remaining == 0:
-        return "오늘 확인", "badge-urgent"
-    elif remaining <= 3:
-        return f"D-{remaining}", "badge-urgent"
+        return "날짜 지남"
 
-    return f"D-{remaining}", "badge-normal"
+    if remaining == 0:
+        return "오늘 확인"
 
+    if remaining <= 3:
+        return f"D-{remaining}"
 
-def safe_text(value):
-    return html.escape(str(value))
+    return f"D-{remaining}"
 
 
 def open_page(page):
@@ -543,8 +421,34 @@ def open_page(page):
     st.rerun()
 
 
+def show_food_card(item):
+    """HTML을 사용하지 않는 재료 카드"""
+
+    with st.container(border=True):
+        col1, col2 = st.columns([4, 1])
+
+        with col1:
+            st.subheader(f"🥬 {item['name']}")
+            st.caption(
+                f"{item['category']} · {item['storage']} 보관"
+            )
+
+        with col2:
+            st.metric(
+                "날짜",
+                expiry_status(item["expiry"])
+            )
+
+        st.write(f"**수량:** {item['quantity']}")
+        st.write(f"**구매일:** {item['purchase_date']}")
+        st.write(f"**확인 날짜:** {item['expiry']}")
+
+        if item.get("note"):
+            st.caption(f"메모: {item['note']}")
+
+
 # =====================================================
-# 6. AI 레시피 생성
+# 7. AI 레시피
 # =====================================================
 
 def generate_ai_recipes(
@@ -554,10 +458,12 @@ def generate_ai_recipes(
     difficulty,
     extra_request
 ):
-    api_key = st.secrets.get("OPENAI_API_KEY")
-
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY를 확인해 줘.")
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        raise ValueError(
+            "OPENAI_API_KEY가 없어. Streamlit Secrets를 확인해 줘."
+        )
 
     client = OpenAI(api_key=api_key)
 
@@ -566,13 +472,13 @@ def generate_ai_recipes(
 
 사용자의 냉장고 재료를 최대한 활용해서 현실적인 요리를 추천해.
 
-반드시 지켜야 할 규칙:
-1. 가진 재료를 최대한 활용한다.
+규칙:
+1. 가지고 있는 재료를 최대한 활용한다.
 2. 없는 재료는 추가 재료로 구분한다.
 3. 조리 시간과 난이도를 지킨다.
 4. 재료 양은 1인분 기준으로 알려준다.
-5. 초보자도 이해할 수 있게 조리 과정을 설명한다.
-6. 대체 재료가 있으면 알려준다.
+5. 초보자도 이해할 수 있게 조리 과정을 자세히 쓴다.
+6. 대체 재료가 있으면 함께 알려준다.
 7. 알레르기와 특별 요청을 고려한다.
 8. 식품 안전을 함부로 단정하지 않는다.
 9. 2~3개의 레시피를 추천한다.
@@ -623,7 +529,7 @@ def generate_ai_recipes(
 
 
 # =====================================================
-# 7. 사이드바
+# 8. 사이드바
 # =====================================================
 
 pages = [
@@ -637,7 +543,6 @@ pages = [
 
 with st.sidebar:
 
-    # HTML 대신 Streamlit 기본 텍스트 사용
     st.caption("S M A R T   K I T C H E N")
     st.title("FRIDGE MATE 🥬")
     st.caption("나만의 작은 키친 매니저")
@@ -645,6 +550,7 @@ with st.sidebar:
     st.divider()
 
     for page, emoji in pages:
+
         selected = st.session_state.selected_menu == page
 
         if st.button(
@@ -666,7 +572,7 @@ with st.sidebar:
 
 
 # =====================================================
-# 8. 대시보드
+# 9. 대시보드
 # =====================================================
 
 if st.session_state.selected_menu == "대시보드":
@@ -680,19 +586,12 @@ if st.session_state.selected_menu == "대시보드":
         if expiry_days(item["expiry"]) <= 3
     ]
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">WELCOME TO YOUR KITCHEN</div>
-        <div class="hero-title">오늘의 냉장고는<br>어떤 모습인가요? 🥬</div>
-        <div class="hero-desc">
-            재료를 확인하고, 맛있는 한 끼를 계획해 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("오늘의 냉장고 🥬")
+    st.caption("재료를 확인하고 맛있는 한 끼를 계획해 보세요.")
 
-    st.caption(f"📅 {date.today().strftime('%Y년 %m월 %d일')}")
+    st.divider()
 
-    st.markdown("### Kitchen Overview")
+    st.subheader("Kitchen Overview")
 
     cols = st.columns(4)
 
@@ -705,40 +604,24 @@ if st.session_state.selected_menu == "대시보드":
 
     for col, (emoji, number, label) in zip(cols, stats):
         with col:
-            st.markdown(f"""
-            <div class="stat-card">
-                <div style="font-size:22px;">{emoji}</div>
-                <div class="stat-number">{number}</div>
-                <div class="stat-label">{label}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            with st.container(border=True):
+                st.subheader(emoji)
+                st.metric(label, number)
 
-    st.markdown("### ⏰ 먼저 확인할 재료")
+    st.subheader("⏰ 먼저 확인할 재료")
 
     if urgent_items:
+
         for item in sorted(
             urgent_items,
             key=lambda x: expiry_days(x["expiry"])
         ):
-            status, badge = expiry_status(item["expiry"])
+            show_food_card(item)
 
-            st.markdown(f"""
-            <div class="food-card">
-                <div class="food-name">
-                    {safe_text(item['name'])}
-                    <span class="{badge}">{status}</span>
-                </div>
-                <div class="food-detail">
-                    {safe_text(item['storage'])} 보관 ·
-                    {safe_text(item['quantity'])} ·
-                    확인 날짜 {safe_text(item['expiry'])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
     else:
         st.success("날짜 확인이 필요한 재료가 없어요!")
 
-    st.markdown("### ✨ Quick Access")
+    st.subheader("✨ Quick Access")
 
     cols = st.columns(3)
 
@@ -748,61 +631,47 @@ if st.session_state.selected_menu == "대시보드":
         ("🛒", "장보기 목록", "필요한 재료를 정리해 보세요.", "장보기 목록")
     ]
 
-    for col, (icon, title, desc, page) in zip(cols, quick_items):
+    for col, (emoji, title, desc, page) in zip(cols, quick_items):
+
         with col:
-            st.markdown(f"""
-            <div class="quick-card">
-                <div class="quick-icon">{icon}</div>
-                <div class="quick-title">{title}</div>
-                <div class="quick-desc">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            with st.container(border=True):
+                st.subheader(emoji)
+                st.markdown(f"**{title}**")
+                st.caption(desc)
 
-            if st.button(
-                f"{title} 열기 →",
-                key=f"quick_{page}",
-                use_container_width=True
-            ):
-                open_page(page)
+                if st.button(
+                    f"{title} 열기 →",
+                    key=f"quick_{page}",
+                    use_container_width=True
+                ):
+                    open_page(page)
 
-    st.markdown("### 🥗 냉장고 미리보기")
+    st.subheader("🥗 냉장고 미리보기")
 
     if items:
+
         cols = st.columns(4)
 
         for col, item in zip(cols, items[:4]):
+
             with col:
-                st.markdown(f"""
-                <div class="content-card">
-                    <div style="font-size:24px;">🥬</div>
-                    <div style="font-weight:800;color:#435644;">
-                        {safe_text(item['name'])}
-                    </div>
-                    <div style="font-size:12px;color:#8A9689;">
-                        {safe_text(item['storage'])} ·
-                        {safe_text(item['quantity'])}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.subheader(f"🥬 {item['name']}")
+                    st.caption(item["storage"])
+                    st.write(item["quantity"])
+
     else:
         st.info("아직 냉장고가 비어 있어요. 첫 번째 재료를 등록해 보세요!")
 
 
 # =====================================================
-# 9. 내 냉장고
+# 10. 내 냉장고
 # =====================================================
 
 elif st.session_state.selected_menu == "내 냉장고":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">MY FOOD INVENTORY</div>
-        <div class="hero-title">내 냉장고 🥬</div>
-        <div class="hero-desc">
-            가지고 있는 식재료를 한눈에 관리해 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("내 냉장고 🥬")
+    st.caption("가지고 있는 식재료를 한눈에 관리해 보세요.")
 
     items = st.session_state.fridge_items
 
@@ -813,25 +682,28 @@ elif st.session_state.selected_menu == "내 냉장고":
         ["냉장", "냉동", "실온"],
         ["🥗", "🧊", "🥔"]
     ):
-        count = sum(1 for x in items if x["storage"] == storage)
+
+        count = sum(
+            1 for x in items
+            if x["storage"] == storage
+        )
 
         with col:
-            st.markdown(f"""
-            <div class="stat-card">
-                <div style="font-size:24px;">{emoji}</div>
-                <div class="stat-number">{count}</div>
-                <div class="stat-label">{storage} 보관</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric(f"{emoji} {storage} 보관", f"{count}개")
 
-    st.markdown("### ➕ 새로운 재료 등록")
+    st.divider()
+    st.subheader("➕ 새로운 재료 등록")
 
     with st.form("add_food_form", clear_on_submit=True):
 
         col1, col2 = st.columns(2)
 
         with col1:
-            name = st.text_input("재료 이름 *", placeholder="예: 계란")
+
+            name = st.text_input(
+                "재료 이름 *",
+                placeholder="예: 계란"
+            )
 
             category = st.selectbox(
                 "카테고리",
@@ -848,7 +720,11 @@ elif st.session_state.selected_menu == "내 냉장고":
             )
 
         with col2:
-            storage = st.selectbox("보관 장소", ["냉장", "냉동", "실온"])
+
+            storage = st.selectbox(
+                "보관 장소",
+                ["냉장", "냉동", "실온"]
+            )
 
             purchase_date = st.date_input(
                 "구매 날짜",
@@ -871,9 +747,12 @@ elif st.session_state.selected_menu == "내 냉장고":
         )
 
         if submitted:
+
             if not name.strip():
                 st.warning("재료 이름을 입력해 주세요.")
+
             else:
+
                 st.session_state.fridge_items.append({
                     "id": str(uuid.uuid4()),
                     "name": name.strip(),
@@ -888,144 +767,160 @@ elif st.session_state.selected_menu == "내 냉장고":
                 save_and_refresh()
 
     st.divider()
-    st.markdown("### 🧺 보관 중인 재료")
+    st.subheader("🧺 보관 중인 재료")
 
     filter_storage = st.selectbox(
-        "보관 장소",
+        "보관 장소 필터",
         ["전체", "냉장", "냉동", "실온"]
     )
 
     filtered = [
         (i, item)
         for i, item in enumerate(st.session_state.fridge_items)
-        if filter_storage == "전체" or item["storage"] == filter_storage
+        if filter_storage == "전체"
+        or item["storage"] == filter_storage
     ]
 
     if not filtered:
+
         st.info("해당하는 재료가 없어요.")
+
     else:
+
         for i, item in filtered:
 
-            status, badge = expiry_status(item["expiry"])
+            with st.container(border=True):
 
-            st.markdown(f"""
-            <div class="food-card">
-                <div class="food-name">
-                    {safe_text(item['name'])}
-                    <span class="{badge}">{status}</span>
-                </div>
-                <div class="food-detail">
-                    {safe_text(item['category'])} ·
-                    {safe_text(item['storage'])} ·
-                    {safe_text(item['quantity'])}
-                </div>
-                <div class="food-detail">
-                    구매일 {safe_text(item['purchase_date'])} ·
-                    확인 날짜 {safe_text(item['expiry'])}
-                </div>
-                <div class="food-detail">
-                    {safe_text(item.get('note', ''))}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                st.subheader(f"🥬 {item['name']}")
 
-            with st.expander(f"✏️ {item['name']} 수정 / 삭제"):
+                st.caption(
+                    f"{item['category']} · {item['storage']} 보관"
+                )
 
-                with st.form(f"edit_{item['id']}"):
+                st.write(f"**수량:** {item['quantity']}")
+                st.write(f"**구매일:** {item['purchase_date']}")
+                st.write(f"**확인 날짜:** {item['expiry']}")
 
-                    new_name = st.text_input(
-                        "재료 이름",
-                        value=item["name"]
-                    )
+                if item.get("note"):
+                    st.caption(f"메모: {item['note']}")
 
-                    categories = [
-                        "채소", "과일", "육류", "해산물",
-                        "유제품", "곡류·면류", "소스·양념",
-                        "가공식품", "기타"
-                    ]
+                st.caption(
+                    f"상태: {expiry_status(item['expiry'])}"
+                )
 
-                    new_category = st.selectbox(
-                        "카테고리",
-                        categories,
-                        index=categories.index(item["category"])
-                    )
+                with st.expander("✏️ 수정 / 삭제"):
 
-                    new_quantity = st.text_input(
-                        "수량",
-                        value=item["quantity"]
-                    )
+                    with st.form(f"edit_{item['id']}"):
 
-                    new_storage = st.selectbox(
-                        "보관 장소",
-                        ["냉장", "냉동", "실온"],
-                        index=["냉장", "냉동", "실온"].index(item["storage"])
-                    )
+                        new_name = st.text_input(
+                            "재료 이름",
+                            value=item["name"]
+                        )
 
-                    new_purchase = st.date_input(
-                        "구매 날짜",
-                        value=item["purchase_date"],
-                        key=f"purchase_{item['id']}"
-                    )
+                        categories = [
+                            "채소", "과일", "육류", "해산물",
+                            "유제품", "곡류·면류", "소스·양념",
+                            "가공식품", "기타"
+                        ]
 
-                    new_expiry = st.date_input(
-                        "소비기한 또는 확인 날짜",
-                        value=item["expiry"],
-                        key=f"expiry_{item['id']}"
-                    )
+                        new_category = st.selectbox(
+                            "카테고리",
+                            categories,
+                            index=categories.index(item["category"])
+                        )
 
-                    new_note = st.text_input(
-                        "메모",
-                        value=item.get("note", "")
-                    )
+                        new_quantity = st.text_input(
+                            "수량",
+                            value=item["quantity"]
+                        )
 
-                    update = st.form_submit_button("변경사항 저장")
+                        new_storage = st.selectbox(
+                            "보관 장소",
+                            ["냉장", "냉동", "실온"],
+                            index=["냉장", "냉동", "실온"].index(
+                                item["storage"]
+                            )
+                        )
 
-                    if update:
-                        if not new_name.strip():
-                            st.warning("재료 이름을 입력해 주세요.")
-                        else:
-                            item.update({
-                                "name": new_name.strip(),
-                                "category": new_category,
-                                "quantity": new_quantity,
-                                "storage": new_storage,
-                                "purchase_date": new_purchase,
-                                "expiry": new_expiry,
-                                "note": new_note
-                            })
+                        new_purchase = st.date_input(
+                            "구매 날짜",
+                            value=item["purchase_date"],
+                            key=f"purchase_{item['id']}"
+                        )
 
-                            save_and_refresh()
+                        new_expiry = st.date_input(
+                            "확인 날짜",
+                            value=item["expiry"],
+                            key=f"expiry_{item['id']}"
+                        )
 
-                if st.button(
-                    "🗑️ 재료 삭제",
-                    key=f"delete_food_{item['id']}"
-                ):
-                    st.session_state.fridge_items.pop(i)
-                    save_and_refresh()
+                        new_note = st.text_input(
+                            "메모",
+                            value=item.get("note", "")
+                        )
+
+                        update = st.form_submit_button(
+                            "변경사항 저장"
+                        )
+
+                        if update:
+
+                            if not new_name.strip():
+                                st.warning("재료 이름을 입력해 주세요.")
+
+                            else:
+
+                                item.update({
+                                    "name": new_name.strip(),
+                                    "category": new_category,
+                                    "quantity": new_quantity,
+                                    "storage": new_storage,
+                                    "purchase_date": new_purchase,
+                                    "expiry": new_expiry,
+                                    "note": new_note
+                                })
+
+                                save_and_refresh()
+
+                    if st.button(
+                        "🗑️ 재료 삭제",
+                        key=f"delete_food_{item['id']}"
+                    ):
+
+                        st.session_state.fridge_items.pop(i)
+                        save_and_refresh()
 
 
 # =====================================================
-# 10. 소비기한 관리
+# 11. 소비기한 관리
 # =====================================================
 
 elif st.session_state.selected_menu == "소비기한 관리":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">EXPIRATION TRACKER</div>
-        <div class="hero-title">소비기한 관리 📅</div>
-        <div class="hero-desc">
-            날짜를 확인하고 식재료를 계획적으로 관리해 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("소비기한 관리 📅")
+    st.caption("날짜를 확인하고 식재료를 계획적으로 관리해 보세요.")
 
     items = st.session_state.fridge_items
 
-    expired = [x for x in items if expiry_days(x["expiry"]) < 0]
-    today_items = [x for x in items if expiry_days(x["expiry"]) == 0]
-    soon = [x for x in items if 1 <= expiry_days(x["expiry"]) <= 3]
-    later = [x for x in items if expiry_days(x["expiry"]) > 3]
+    expired = [
+        x for x in items
+        if expiry_days(x["expiry"]) < 0
+    ]
+
+    today_items = [
+        x for x in items
+        if expiry_days(x["expiry"]) == 0
+    ]
+
+    soon = [
+        x for x in items
+        if 1 <= expiry_days(x["expiry"]) <= 3
+    ]
+
+    later = [
+        x for x in items
+        if expiry_days(x["expiry"]) > 3
+    ]
 
     cols = st.columns(4)
 
@@ -1034,6 +929,7 @@ elif st.session_state.selected_menu == "소비기한 관리":
         ["날짜 지남", "오늘", "3일 이내", "여유 있음"],
         [len(expired), len(today_items), len(soon), len(later)]
     ):
+
         with col:
             st.metric(title, f"{count}개")
 
@@ -1045,28 +941,18 @@ elif st.session_state.selected_menu == "소비기한 관리":
     ]
 
     for title, group in groups:
-        st.markdown(f"### {title}")
+
+        st.subheader(title)
 
         if not group:
             st.caption("해당하는 재료가 없어요.")
             continue
 
-        for item in sorted(group, key=lambda x: expiry_days(x["expiry"])):
-            status, badge = expiry_status(item["expiry"])
-
-            st.markdown(f"""
-            <div class="food-card">
-                <div class="food-name">
-                    {safe_text(item['name'])}
-                    <span class="{badge}">{status}</span>
-                </div>
-                <div class="food-detail">
-                    {safe_text(item['storage'])} ·
-                    {safe_text(item['quantity'])} ·
-                    {safe_text(item['expiry'])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        for item in sorted(
+            group,
+            key=lambda x: expiry_days(x["expiry"])
+        ):
+            show_food_card(item)
 
     if not items:
         st.info("먼저 냉장고에 재료를 등록해 주세요.")
@@ -1078,26 +964,21 @@ elif st.session_state.selected_menu == "소비기한 관리":
 
 
 # =====================================================
-# 11. AI 레시피
+# 12. AI 레시피
 # =====================================================
 
 elif st.session_state.selected_menu == "AI 레시피":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">AI RECIPE STUDIO</div>
-        <div class="hero-title">오늘은 어떤 요리를 할까요? 🍳</div>
-        <div class="hero-desc">
-            냉장고 속 재료를 활용해 새로운 한 끼를 발견해 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("오늘은 어떤 요리를 할까요? 🍳")
+    st.caption("냉장고 속 재료를 활용해 새로운 한 끼를 발견해 보세요.")
 
     saved_ingredients = ", ".join(
-        item["name"] for item in st.session_state.fridge_items
+        item["name"]
+        for item in st.session_state.fridge_items
     )
 
-    st.markdown("### 🥬 요리 조건 설정")
+    st.divider()
+    st.subheader("🥬 요리 조건 설정")
 
     with st.form("recipe_form"):
 
@@ -1111,6 +992,7 @@ elif st.session_state.selected_menu == "AI 레시피":
         col1, col2 = st.columns(2)
 
         with col1:
+
             category = st.selectbox(
                 "음식 종류",
                 ["전체", "한식", "양식", "중식", "일식", "간식", "간단식"]
@@ -1124,6 +1006,7 @@ elif st.session_state.selected_menu == "AI 레시피":
             )
 
         with col2:
+
             difficulty = st.selectbox(
                 "난이도",
                 ["전체", "쉬움", "보통"]
@@ -1140,11 +1023,16 @@ elif st.session_state.selected_menu == "AI 레시피":
         )
 
     if generate:
+
         if not ingredients.strip():
             st.warning("사용할 재료를 입력해 주세요.")
+
         else:
+
             with st.spinner("AI 요리사가 레시피를 만드는 중이에요..."):
+
                 try:
+
                     result = generate_ai_recipes(
                         ingredients,
                         category,
@@ -1170,7 +1058,7 @@ elif st.session_state.selected_menu == "AI 레시피":
     if st.session_state.recipe_results:
 
         st.divider()
-        st.markdown("### 🍽️ 오늘의 추천 레시피")
+        st.subheader("🍽️ 오늘의 추천 레시피")
 
         st.markdown(st.session_state.recipe_results)
 
@@ -1182,6 +1070,7 @@ elif st.session_state.selected_menu == "AI 레시피":
             )
 
             if not already_saved:
+
                 st.session_state.saved_recipes.append({
                     "id": str(uuid.uuid4()),
                     "title": "AI 추천 레시피",
@@ -1190,25 +1079,19 @@ elif st.session_state.selected_menu == "AI 레시피":
                 })
 
                 save_and_refresh()
+
             else:
                 st.info("이미 저장한 레시피예요!")
 
 
 # =====================================================
-# 12. 장보기 목록
+# 13. 장보기 목록
 # =====================================================
 
 elif st.session_state.selected_menu == "장보기 목록":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">GROCERY CHECKLIST</div>
-        <div class="hero-title">장보기 목록 🛒</div>
-        <div class="hero-desc">
-            필요한 재료를 기록하고 장보기를 계획해 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("장보기 목록 🛒")
+    st.caption("필요한 재료를 기록하고 장보기를 계획해 보세요.")
 
     with st.form("grocery_form", clear_on_submit=True):
 
@@ -1232,7 +1115,9 @@ elif st.session_state.selected_menu == "장보기 목록":
         )
 
         if add:
+
             if name.strip():
+
                 st.session_state.grocery_items.append({
                     "id": str(uuid.uuid4()),
                     "name": name.strip(),
@@ -1241,118 +1126,110 @@ elif st.session_state.selected_menu == "장보기 목록":
                 })
 
                 save_and_refresh()
+
             else:
                 st.warning("재료 이름을 입력해 주세요.")
 
     st.divider()
-    st.markdown("### 🧺 구매할 재료")
+    st.subheader("🧺 구매할 재료")
 
     groceries = st.session_state.grocery_items
 
     if not groceries:
+
         st.info("장보기 목록이 비어 있어요.")
+
     else:
+
         for i, item in enumerate(groceries):
 
-            col1, col2, col3 = st.columns([1, 5, 1])
+            with st.container(border=True):
 
-            with col1:
-                checked = st.checkbox(
-                    "완료",
-                    value=item["done"],
-                    key=f"grocery_{item['id']}"
-                )
+                col1, col2 = st.columns([5, 1])
 
-            with col2:
-                if checked:
-                    st.markdown(
-                        f"~~**{safe_text(item['name'])}**~~ · {safe_text(item['quantity'])}"
-                    )
-                else:
-                    st.markdown(
-                        f"**{safe_text(item['name'])}** · {safe_text(item['quantity'])}"
+                with col1:
+
+                    checked = st.checkbox(
+                        f"{item['name']} · {item['quantity']}",
+                        value=item["done"],
+                        key=f"grocery_{item['id']}"
                     )
 
-            with col3:
-                if st.button(
-                    "삭제",
-                    key=f"delete_grocery_{item['id']}"
-                ):
+                with col2:
+
+                    delete = st.button(
+                        "삭제",
+                        key=f"delete_grocery_{item['id']}"
+                    )
+
+                if delete:
                     st.session_state.grocery_items.pop(i)
                     save_and_refresh()
 
-            if checked != item["done"]:
-                item["done"] = checked
-                save_data()
+                if checked != item["done"]:
+                    item["done"] = checked
+                    save_data()
 
-        done_count = sum(1 for x in groceries if x["done"])
+        done_count = sum(
+            1 for x in groceries if x["done"]
+        )
 
         st.divider()
         st.progress(done_count / len(groceries))
         st.caption(f"{done_count} / {len(groceries)}개 구매 완료")
 
         if st.button("완료한 항목 모두 삭제"):
+
             st.session_state.grocery_items = [
                 x for x in groceries if not x["done"]
             ]
+
             save_and_refresh()
 
 
 # =====================================================
-# 13. 나의 요리책
+# 14. 나의 요리책
 # =====================================================
 
 elif st.session_state.selected_menu == "나의 요리책":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="hero-small">MY PERSONAL COOKBOOK</div>
-        <div class="hero-title">나의 작은 요리책 📖</div>
-        <div class="hero-desc">
-            마음에 드는 레시피를 모아 나만의 요리책을 만들어 보세요.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("나의 작은 요리책 📖")
+    st.caption("마음에 드는 레시피를 모아 나만의 요리책을 만들어 보세요.")
 
     recipes = st.session_state.saved_recipes
 
     if not recipes:
+
         st.info(
             "아직 저장한 레시피가 없어요. "
             "AI 레시피에서 마음에 드는 요리를 저장해 보세요!"
         )
+
     else:
-        st.markdown(f"### 💚 저장한 레시피 {len(recipes)}개")
+
+        st.subheader(f"💚 저장한 레시피 {len(recipes)}개")
 
         for i, recipe in enumerate(recipes):
 
             with st.expander(
                 f"🍳 {recipe['title']} · {recipe['created_at']}"
             ):
+
                 st.markdown(recipe["content"])
 
                 if st.button(
                     "🗑️ 이 레시피 삭제",
                     key=f"delete_recipe_{recipe['id']}"
                 ):
+
                     st.session_state.saved_recipes.pop(i)
                     save_and_refresh()
 
 
 # =====================================================
-# 14. 하단
+# 15. 하단
 # =====================================================
 
 st.divider()
 
-st.markdown("""
-<div style="
-    text-align:center;
-    padding:24px;
-    color:#A0AAA0;
-    font-size:12px;
-">
-    🥬 FRIDGE MATE<br>
-    Fresh food, better days.
-</div>
-""", unsafe_allow_html=True)
+st.caption("🥬 FRIDGE MATE · Fresh food, better days.")
