@@ -199,118 +199,103 @@ if "supabase_client" not in st.session_state:
 
 if "supabase_user_id" not in st.session_state:
     st.session_state.supabase_user_id = None
+if "supabase_session" not in st.session_state:
+    st.session_state.supabase_session = None
 
 
 # =====================================================
-# 4. Supabase 연결
+# 4. Supabase 인증 / 세션 복원
 # =====================================================
 
-_cookie_controller_instance = None
+COOKIE_NAME = "fridge_mate_session"
+COOKIE_DAYS = 30
 
 
-def get_cookie_controller():
-    """Streamlit 재실행마다 쿠키 컴포넌트가 화면 트리에 남도록 유지."""
-    global _cookie_controller_instance
-    if _cookie_controller_instance is None:
-        _cookie_controller_instance = CookieController(key="fridge_mate_cookies")
-    return _cookie_controller_instance
+_controller = None
+
+def cookie_controller():
+    # 한 번의 Streamlit 스크립트 실행에서는 컨트롤러를 하나만 만든다.
+    global _controller
+    if _controller is None:
+        _controller = CookieController(key="fridge_mate_cookies")
+    return _controller
 
 
-def set_cloud_error(step, err):
+def set_cloud_error(step, message):
     st.session_state.cloud_ready = False
     st.session_state.cloud_error_step = step
-    st.session_state.cloud_error = str(err)
+    st.session_state.cloud_error = str(message)
 
 
-def save_cookie_session():
-    """쿠키는 인증용 비밀 정보이므로 화면/로그에 출력하지 않는다."""
-    client = st.session_state.supabase_client
-    if client is None:
-        return False
+def supabase_client():
+    url = str(st.secrets.get("SUPABASE_URL", "")).strip().rstrip("/")
+    key = str(st.secrets.get("SUPABASE_KEY", "")).strip()
+    if not url or not key:
+        raise RuntimeError("Streamlit Secrets의 SUPABASE_URL 또는 SUPABASE_KEY가 비어 있어.")
+    if url.endswith("/rest/v1") or url.endswith("/auth/v1"):
+        raise RuntimeError("SUPABASE_URL에는 /rest/v1 또는 /auth/v1을 넣으면 안 돼.")
+    return create_client(url, key)
+
+
+def read_stored_session():
+    # st.context.cookies는 새 브라우저 연결 당시의 실제 HTTP 쿠키를 읽는다.
+    # 브라우저 컴포넌트 값이 첫 렌더링에서 아직 비어 있을 수 있으므로
+    # '쿠키 없음'을 '새 계정 생성 허용'으로 해석하지 않는다.
+    value = None
     try:
-        session = client.auth.get_session()
-        if session is None:
-            return False
-        get_cookie_controller().set(
-            "fridge_mate_session",
+        value = st.context.cookies.get(COOKIE_NAME)
+    except Exception:
+        pass
+    if not value:
+        try:
+            value = cookie_controller().get(COOKIE_NAME)
+        except Exception as exc:
+            st.session_state.cookie_warning = "쿠키 읽기 실패: " + str(exc)
+    if not value:
+        return None
+    try:
+        obj = json.loads(value) if isinstance(value, str) else value
+        if not isinstance(obj, dict):
+            raise ValueError("세션 형식이 올바르지 않아.")
+        access = obj.get("access_token")
+        refresh = obj.get("refresh_token")
+        if not access or not refresh:
+            raise ValueError("저장된 토큰이 불완전해.")
+        return {"access_token": access, "refresh_token": refresh}
+    except Exception as exc:
+        raise RuntimeError("저장된 로그인 쿠키를 읽었지만 해석할 수 없어: " + str(exc)) from exc
+
+
+def persist_session(session):
+    # 토큰을 화면에 출력하지 않는다. 저장 실패 시 로그인을 새로 생성하지 않는다.
+    try:
+        cookie_controller().set(
+            COOKIE_NAME,
             json.dumps({
                 "access_token": session.access_token,
                 "refresh_token": session.refresh_token,
             }),
-            max_age=60 * 60 * 24 * 30,
+            max_age=60 * 60 * 24 * COOKIE_DAYS,
             secure=True,
             same_site="lax",
         )
+        st.session_state.cookie_warning = ""
+        st.session_state.cookie_write_requested = True
         return True
     except Exception as exc:
-        # 서버의 저장 성공과 브라우저 쿠키 기록 성공은 별도로 진단
-        st.session_state.cookie_warning = type(exc).__name__ + ": " + str(exc)
+        st.session_state.cookie_warning = (
+            "로그인은 됐지만 쿠키 저장 요청이 실패했어: " + str(exc)
+        )
         return False
-
-
-def connect_supabase(allow_new_user=False):
-    """기존 세션 복원을 우선하고, 잘못된 쿠키를 조용히 새 계정으로 바꾸지 않는다."""
-    st.session_state.cloud_error = ""
-    st.session_state.cloud_error_step = ""
-    st.session_state.cookie_warning = ""
-    try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
-        if not url or not key:
-            raise RuntimeError("Streamlit Secrets의 SUPABASE_URL 또는 SUPABASE_KEY가 비어 있어.")
-    except Exception as exc:
-        set_cloud_error("Secrets 확인", exc)
-        return None, None
-
-    try:
-        client = create_client(url, key)
-    except Exception as exc:
-        set_cloud_error("Supabase 클라이언트 생성", exc)
-        return None, None
-
-    try:
-        controller = get_cookie_controller()
-        cookie_value = controller.get("fridge_mate_session")
-    except Exception as exc:
-        set_cloud_error("브라우저 쿠키 읽기", exc)
-        return None, None
-
-    try:
-        if cookie_value:
-            try:
-                saved = json.loads(cookie_value) if isinstance(cookie_value, str) else cookie_value
-                response = client.auth.set_session(saved["access_token"], saved["refresh_token"])
-                session = response.session
-            except Exception as exc:
-                set_cloud_error("기존 로그인 복원", "기존 로그인 정보를 복원하지 못했어. 쿠키를 지우거나 새 계정을 만들지 않았어. 상세: " + str(exc))
-                return None, None
-        else:
-            # 페이지 최초 실행 시 브라우저 쿠키 컴포넌트가 아직 준비되지 않을 수 있음.
-            # 기존 계정 유실을 막기 위해 사용자의 명시적 클릭 이후에만 신규 가입.
-            if not allow_new_user:
-                set_cloud_error("로그인 대기", "저장된 로그인 정보를 찾지 못했어. 아래 '연결 다시 시도'를 먼저 눌러 줘. 기존 계정이 없는 신규 사용자만 '새 익명 계정 만들기'를 눌러 줘.")
-                return None, None
-            response = client.auth.sign_in_anonymously()
-            session = response.session
-
-        if session is None or session.user is None:
-            raise RuntimeError("Supabase가 로그인 세션을 반환하지 않았어.")
-        st.session_state.supabase_client = client
-        st.session_state.supabase_user_id = session.user.id
-        save_cookie_session()
-        return client, session.user.id
-    except Exception as exc:
-        set_cloud_error("익명 로그인", exc)
-        return None, None
 
 
 def serialize_data():
     items = []
     for item in st.session_state.fridge_items:
         copied = item.copy()
-        for key in ["expiry", "purchase_date"]:
-            if isinstance(copied.get(key), date):
-                copied[key] = copied[key].isoformat()
+        for field in ("expiry", "purchase_date"):
+            if isinstance(copied.get(field), date):
+                copied[field] = copied[field].isoformat()
         items.append(copied)
     return {
         "fridge_items": items,
@@ -322,51 +307,105 @@ def serialize_data():
 
 
 def load_data(client, user_id):
-    result = (
-        client.table("vibe_check_data")
-        .select("data")
-        .eq("user_id", user_id)
-        .execute()
-    )
+    result = (client.table("vibe_check_data")
+              .select("data").eq("user_id", user_id).execute())
+    # 데이터가 없다는 것은 신규 계정이라는 의미이고, 조회 실패와 구분한다.
     if result.data:
         saved = result.data[0].get("data") or {}
         for key in DEFAULT_DATA:
             if key in saved:
                 st.session_state[key] = saved[key]
         for item in st.session_state.fridge_items:
-            for key in ["expiry", "purchase_date"]:
-                value = item.get(key)
+            for field in ("expiry", "purchase_date"):
+                value = item.get(field)
                 if isinstance(value, str):
                     try:
-                        item[key] = date.fromisoformat(value)
+                        item[field] = date.fromisoformat(value)
                     except ValueError:
-                        item[key] = date.today()
+                        item[field] = date.today()
     st.session_state.data_loaded = True
 
 
-def start_cloud(allow_new_user=False):
-    """기존 데이터가 있는 서버 계정을 먼저 읽기. 재시도 버튼에서도 사용."""
-    client, user_id = connect_supabase(allow_new_user=allow_new_user)
-    if client is None or user_id is None:
+def connect_cloud(create_new=False):
+    """기본 동작은 복원만. 신규 계정은 버튼으로 명시적으로 요청할 때만 생성."""
+    st.session_state.cloud_error = ""
+    st.session_state.cloud_error_step = ""
+    try:
+        client = supabase_client()
+    except Exception as exc:
+        set_cloud_error("Secrets / URL / API 키", exc)
+        return False
+
+    existing_session = st.session_state.get("supabase_session")
+    try:
+        if existing_session is not None and st.session_state.get("supabase_user_id"):
+            # 동일한 Streamlit 세션에서 버튼 재시도 시에는 새 계정을 만들지 않는다.
+            response = client.auth.set_session(
+                existing_session.access_token,
+                existing_session.refresh_token,
+            )
+            session = response.session
+        else:
+            credentials = read_stored_session()
+            if credentials:
+                response = client.auth.set_session(
+                    credentials["access_token"], credentials["refresh_token"]
+                )
+                session = response.session
+            elif create_new:
+                response = client.auth.sign_in_anonymously()
+                session = response.session
+            else:
+                set_cloud_error(
+                    "로그인 정보 확인",
+                    "현재 브라우저에서 로그인 쿠키를 찾지 못했어. "
+                    "'기존 로그인 다시 확인'을 먼저 눌러봐. "
+                    "새 계정이 정말 필요한 경우에만 계정을 생성해 줘."
+                )
+                return False
+        if session is None or session.user is None:
+            raise RuntimeError("로그인 세션을 받지 못했어.")
+    except Exception as exc:
+        set_cloud_error("로그인 복원 / 생성", exc)
+        return False
+
+    # DB 조회가 실패해도 같은 세션을 유지하며, 새 계정을 만들지 않는다.
+    st.session_state.supabase_client = client
+    st.session_state.supabase_user_id = session.user.id
+    st.session_state.supabase_session = session
+    persist_session(session)
+    try:
+        load_data(client, session.user.id)
+    except Exception as exc:
+        set_cloud_error("테이블 조회 / RLS", exc)
+        return False
+
+    st.session_state.cloud_ready = True
+    st.session_state.cloud_error = ""
+    st.session_state.cloud_error_step = ""
+    return True
+
+
+def save_cookie_session():
+    client = st.session_state.get("supabase_client")
+    if client is None:
         return False
     try:
-        load_data(client, user_id)
-        st.session_state.cloud_ready = True
-        st.session_state.cloud_error = ""
-        st.session_state.cloud_error_step = ""
-        return True
+        session = client.auth.get_session()
+        if session is None:
+            return False
+        st.session_state.supabase_session = session
+        return persist_session(session)
     except Exception as exc:
-        st.session_state.supabase_client = None
-        st.session_state.supabase_user_id = None
-        set_cloud_error("테이블 조회 / RLS", exc)
+        st.session_state.cookie_warning = str(exc)
         return False
 
 
 def save_data():
-    client = st.session_state.supabase_client
-    user_id = st.session_state.supabase_user_id
+    client = st.session_state.get("supabase_client")
+    user_id = st.session_state.get("supabase_user_id")
     if not st.session_state.cloud_ready or client is None or not user_id:
-        st.error("클라우드에 연결되지 않아 저장하지 못했어. 사이드바에서 연결을 확인해 줘.")
+        st.error("클라우드에 연결되지 않아 저장하지 못했어. 사이드바의 연결 진단을 확인해 줘.")
         return False
     try:
         payload = serialize_data()
@@ -375,11 +414,10 @@ def save_data():
             "data": payload,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }, on_conflict="user_id").execute()
-        # 읽기까지 성공해야 저장 확인으로 처리한다.
-        readback = (client.table("vibe_check_data").select("data")
-                    .eq("user_id", user_id).execute())
+        readback = (client.table("vibe_check_data")
+                    .select("data").eq("user_id", user_id).execute())
         if len(readback.data or []) != 1 or readback.data[0].get("data") != payload:
-            raise RuntimeError("쓰기 후 재조회한 데이터가 일치하지 않아. 데이터가 덮어써지지 않았는지 확인해 줘.")
+            raise RuntimeError("저장 후 다시 읽은 데이터가 일치하지 않아.")
         save_cookie_session()
         st.session_state.last_save_ok = datetime.now().strftime("%H:%M:%S")
         return True
@@ -394,18 +432,11 @@ def save_and_refresh():
         st.rerun()
 
 
-# 쿠키 위젯을 모든 실행에서 유지하여 브라우저 쿠키 읽기를 가능하게 한다.
-try:
-    get_cookie_controller()
-except Exception as exc:
-    set_cloud_error("브라우저 쿠키 컴포넌트", exc)
-
-# 새 계정으로 시작하는 데 사용자가 동의했으므로 첫 실행에서 자동 연결한다.
-# 버튼 클릭이 되지 않아도 로그인 요청이 실행되며, 실패 시 원인을 화면에 표시한다.
-# 한 Streamlit 세션 안에서 계정을 반복 생성하지 않도록 한 번만 시도한다.
-if not st.session_state.cloud_ready and not st.session_state.get("auto_cloud_attempted", False):
-    st.session_state.auto_cloud_attempted = True
-    start_cloud(allow_new_user=True)
+# 최초 접속에서는 브라우저의 쿠키를 복원만 시도하고 새 계정은 생성하지 않는다.
+# 새로고침으로 session_state가 초기화되더라도 새 익명 ID가 생기지 않는다.
+if not st.session_state.get("auth_initial_attempted", False):
+    st.session_state.auth_initial_attempted = True
+    connect_cloud(create_new=False)
 
 
 # =====================================================
@@ -599,39 +630,42 @@ with st.sidebar:
         with st.expander("🔎 저장 연결 진단", expanded=True):
             st.write("실패 단계:", st.session_state.get("cloud_error_step", "확인 중"))
             st.write(st.session_state.get("cloud_error", "오류 정보 없음"))
-            st.caption("프로젝트가 Healthy인데도 연결되지 않으면 아래 결과의 오류 메시지를 확인해 줘.")
-            if st.button("🔄 연결 다시 시도", use_container_width=True, key="retry_cloud_diagnostic"):
-                if start_cloud():
+            if st.session_state.get("supabase_user_id"):
+                st.info("현재 세션의 사용자 ID는 유지 중이야. 새 계정을 만들지 말고 기존 연결을 다시 확인해 줘.")
+                st.code(st.session_state.supabase_user_id)
+            if st.button("🔄 기존 로그인 다시 확인", use_container_width=True, key="retry_cloud_diagnostic"):
+                if connect_cloud(create_new=False):
                     st.rerun()
                 else:
-                    st.error("재연결 실패 · " + str(st.session_state.get("cloud_error_step", "알 수 없음")) + ": " + str(st.session_state.get("cloud_error", "")))
-            st.caption("기존 데이터가 필요 없는 경우에만 사용해. 한 번만 누르고 결과를 확인해 줘.")
-            if st.button("새 익명 계정 만들기", use_container_width=True, key="new_anon_diagnostic"):
-                if start_cloud(allow_new_user=True):
+                    st.error("연결 확인 실패: " + str(st.session_state.get("cloud_error", "")))
+            st.caption("아직 로그인 기록이 전혀 없는 브라우저에서만 사용해. 기존 쿠키가 있으면 기존 계정을 우선 복원해.")
+            if st.button("새 익명 계정 시작하기", use_container_width=True,
+                         key="new_anon_diagnostic", disabled=bool(st.session_state.get("supabase_user_id"))):
+                if connect_cloud(create_new=True):
                     st.rerun()
                 else:
-                    st.error("계정 생성 또는 데이터 조회 실패 · " + str(st.session_state.get("cloud_error_step", "알 수 없음")) + ": " + str(st.session_state.get("cloud_error", "")))
+                    st.error("연결 실패: " + str(st.session_state.get("cloud_error", "")))
     else:
-        st.caption("데이터 조회 완료 · 저장은 변경 시 확인")
+        st.caption("클라우드 데이터 조회 완료")
         if st.session_state.get("last_save_ok"):
-            st.caption("마지막 저장 검증: " + st.session_state.last_save_ok)
+            st.caption("마지막 저장 확인: " + st.session_state.last_save_ok)
         if st.session_state.get("cookie_warning"):
-            st.warning("데이터 연결은 됐지만 브라우저 로그인 정보 저장에 문제가 있을 수 있어.")
+            st.warning("브라우저 로그인 쿠키에 문제가 있어: " + st.session_state.cookie_warning)
         with st.expander("🔎 연결 검사 / 계정 정보"):
-            st.caption("사용자 ID는 현재 브라우저의 익명 계정 식별자야.")
+            st.caption("새로고침 전후에 아래 ID가 동일해야 해.")
             st.code(st.session_state.supabase_user_id)
             if st.button("서버 데이터 다시 조회", key="reload_server_test"):
                 try:
                     check = (st.session_state.supabase_client.table("vibe_check_data")
                              .select("data").eq("user_id", st.session_state.supabase_user_id).execute())
-                    st.success("서버 조회 성공 · 저장 데이터 행: " + str(len(check.data or [])))
+                    st.success("서버 조회 성공 · 데이터 행: " + str(len(check.data or [])))
                 except Exception as exc:
                     st.error("조회 실패: " + str(exc))
-            if st.button("쿠키 다시 저장", key="resave_cookie"):
+            if st.button("로그인 쿠키 다시 저장", key="resave_cookie"):
                 if save_cookie_session():
-                    st.success("브라우저 쿠키 저장을 요청했어. 새로고침 후 같은 사용자 ID인지 확인해 줘.")
+                    st.success("쿠키 저장을 요청했어. Ctrl+F5 후 사용자 ID가 같은지 확인해 줘.")
                 else:
-                    st.error("쿠키 저장 요청 실패. 브라우저의 쿠키 허용 설정도 확인해 줘.")
+                    st.error("쿠키 저장 실패: " + st.session_state.get("cookie_warning", ""))
 
     st.caption("Fresh food, better days.")
 
