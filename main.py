@@ -400,9 +400,12 @@ try:
 except Exception as exc:
     set_cloud_error("브라우저 쿠키 컴포넌트", exc)
 
-# 최초 실행 때 무조건 새 익명 계정을 만들지 않는다.
-if not st.session_state.data_loaded and not st.session_state.cloud_ready:
-    start_cloud()
+# 새 계정으로 시작하는 데 사용자가 동의했으므로 첫 실행에서 자동 연결한다.
+# 버튼 클릭이 되지 않아도 로그인 요청이 실행되며, 실패 시 원인을 화면에 표시한다.
+# 한 Streamlit 세션 안에서 계정을 반복 생성하지 않도록 한 번만 시도한다.
+if not st.session_state.cloud_ready and not st.session_state.get("auto_cloud_attempted", False):
+    st.session_state.auto_cloud_attempted = True
+    start_cloud(allow_new_user=True)
 
 
 # =====================================================
@@ -596,13 +599,18 @@ with st.sidebar:
         with st.expander("🔎 저장 연결 진단", expanded=True):
             st.write("실패 단계:", st.session_state.get("cloud_error_step", "확인 중"))
             st.write(st.session_state.get("cloud_error", "오류 정보 없음"))
-            if st.button("🔄 연결 다시 시도", use_container_width=True):
+            st.caption("프로젝트가 Healthy인데도 연결되지 않으면 아래 결과의 오류 메시지를 확인해 줘.")
+            if st.button("🔄 연결 다시 시도", use_container_width=True, key="retry_cloud_diagnostic"):
                 if start_cloud():
                     st.rerun()
-            st.caption("처음 사용하는 브라우저에서만 아래 버튼을 사용해. 기존 익명 계정이 있다면 다른 ID가 만들어질 수 있어.")
-            if st.button("새 익명 계정 만들기", use_container_width=True):
+                else:
+                    st.error("재연결 실패 · " + str(st.session_state.get("cloud_error_step", "알 수 없음")) + ": " + str(st.session_state.get("cloud_error", "")))
+            st.caption("기존 데이터가 필요 없는 경우에만 사용해. 한 번만 누르고 결과를 확인해 줘.")
+            if st.button("새 익명 계정 만들기", use_container_width=True, key="new_anon_diagnostic"):
                 if start_cloud(allow_new_user=True):
                     st.rerun()
+                else:
+                    st.error("계정 생성 또는 데이터 조회 실패 · " + str(st.session_state.get("cloud_error_step", "알 수 없음")) + ": " + str(st.session_state.get("cloud_error", "")))
     else:
         st.caption("데이터 조회 완료 · 저장은 변경 시 확인")
         if st.session_state.get("last_save_ok"):
