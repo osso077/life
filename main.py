@@ -1,3 +1,4 @@
+
 import streamlit as st
 import json
 import uuid
@@ -51,7 +52,6 @@ p {
     color: #68736A;
 }
 
-/* 사이드바 */
 [data-testid="stSidebar"] {
     background: #FFFFFF;
     border-right: 1px solid #E8ECE7;
@@ -65,7 +65,6 @@ p {
     font-weight: 700;
 }
 
-/* 선택되지 않은 사이드바 버튼 */
 [data-testid="stSidebar"] div.stButton > button[kind="secondary"] {
     background: #FFFFFF !important;
     border: 1px solid #E7ECE5 !important;
@@ -76,7 +75,6 @@ p {
     color: #536653 !important;
 }
 
-/* 선택된 사이드바 버튼 */
 [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
     background: #71896B !important;
     border: 1px solid #71896B !important;
@@ -87,7 +85,6 @@ p {
     color: #FFFFFF !important;
 }
 
-/* 메인 버튼 */
 div.stButton > button,
 div.stFormSubmitButton > button {
     background: #71896B;
@@ -108,14 +105,12 @@ div.stFormSubmitButton > button:hover {
     border-color: #5E7758;
 }
 
-/* 카드 */
 [data-testid="stVerticalBlockBorderWrapper"] {
     background: #FFFFFF;
     border: 1px solid #E8EDE5;
     border-radius: 16px;
 }
 
-/* 입력창 */
 .stTextInput input,
 .stTextArea textarea,
 .stNumberInput input,
@@ -132,7 +127,6 @@ div.stFormSubmitButton > button:hover {
     border-color: #DDE5D9 !important;
 }
 
-/* 메트릭 */
 [data-testid="stMetric"] {
     background: #FFFFFF;
     border: 1px solid #E9EDE7;
@@ -144,7 +138,6 @@ div.stFormSubmitButton > button:hover {
     color: #607B59;
 }
 
-/* 확장 영역 */
 [data-testid="stExpander"] {
     background: #FFFFFF;
     border: 1px solid #E8EDE5;
@@ -185,9 +178,10 @@ DEFAULT_DATA = {
 
 for key, value in DEFAULT_DATA.items():
     if key not in st.session_state:
-        st.session_state[key] = (
-            value.copy() if isinstance(value, list) else value
-        )
+        if isinstance(value, (list, dict)):
+            st.session_state[key] = value.copy()
+        else:
+            st.session_state[key] = value
 
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "대시보드"
@@ -218,7 +212,6 @@ COOKIE_DAYS = 30
 
 
 def cookie_controller():
-    # 기존 컴포넌트 키를 유지하여 이전 버전의 로그인 쿠키와 호환.
     return CookieController(key="fridge_mate_cookies")
 
 
@@ -246,7 +239,6 @@ def supabase_client():
 
 
 def cookie_snapshot():
-    """민감정보를 표시하지 않고 쿠키 읽기 경로만 검사한다."""
     result = {
         "component_ok": False,
         "component_cookie": None,
@@ -272,8 +264,6 @@ def cookie_snapshot():
 
 
 def read_stored_session():
-    # 컴포넌트가 첫 렌더에 준비되지 않을 수 있다.
-    # None은 곧바로 계정 생성 사유가 아니다.
     snap = cookie_snapshot()
     value = snap["component_cookie"] or snap["request_cookie"]
 
@@ -288,7 +278,7 @@ def read_stored_session():
             or not obj.get("access_token")
             or not obj.get("refresh_token")
         ):
-            raise ValueError("로그인 쿠키 구조가 올바르지 않아")
+            raise ValueError("로그인 쿠키 구조가 올바르지 않아.")
 
         return {
             "access_token": obj["access_token"],
@@ -302,7 +292,6 @@ def read_stored_session():
 
 
 def write_cookie(name, value):
-    # 라이브러리는 expires 기본값이 1일이므로 반드시 별도 명시한다.
     cookie_controller().set(
         name,
         value,
@@ -315,7 +304,6 @@ def write_cookie(name, value):
 
 
 def persist_session(session):
-    """브라우저에 쓰기를 요청한다. 실제 브라우저 저장 성공과는 구별한다."""
     try:
         write_cookie(
             COOKIE_NAME,
@@ -343,8 +331,8 @@ def test_cookie_write():
 
         st.session_state.probe_expected = token
         st.session_state.probe_result = (
-            "테스트 쿠키 저장 요청 완료. 이제 앱을 Ctrl+F5로 새로고침한 뒤 "
-            "'테스트 쿠키 읽기'를 눌러줘. 요청 완료는 실제 저장 성공이 아니야."
+            "테스트 쿠키 저장 요청 완료. 앱을 Ctrl+F5로 새로고침한 뒤 "
+            "'테스트 쿠키 읽기'를 눌러줘."
         )
 
         return True
@@ -370,7 +358,7 @@ def test_cookie_read():
         elif ctrl_value:
             msg = (
                 "쿠키 컴포넌트에서 테스트 쿠키가 확인됐어. "
-                "다만 새 브라우저 연결에서도 유지되는지는 아직 확인이 필요해."
+                "새 브라우저 연결에서도 유지되는지는 추가 확인이 필요해."
             )
         else:
             msg = (
@@ -379,7 +367,7 @@ def test_cookie_read():
             )
 
         if expected and ctrl_value and ctrl_value != expected:
-            msg += " (이번 실행 이전의 테스트 쿠키일 수 있어.)"
+            msg += " (이전 실행의 테스트 쿠키일 수 있어.)"
 
         st.session_state.probe_result = msg
 
@@ -465,8 +453,6 @@ def load_data(client, user_id):
         .execute()
     )
 
-    # 데이터가 없다는 것은 신규 계정이라는 의미이고,
-    # 조회 실패와 구분한다.
     if result.data:
         saved = result.data[0].get("data") or {}
 
@@ -488,13 +474,11 @@ def load_data(client, user_id):
 
 
 def connect_cloud(create_new=False):
-    """기본 동작은 복원만. 신규 계정은 버튼으로 명시적으로 요청할 때만 생성."""
     st.session_state.cloud_error = ""
     st.session_state.cloud_error_step = ""
 
     try:
         client = supabase_client()
-
     except Exception as exc:
         set_cloud_error("Secrets / URL / API 키", exc)
         return False
@@ -506,12 +490,10 @@ def connect_cloud(create_new=False):
             existing_session is not None
             and st.session_state.get("supabase_user_id")
         ):
-            # 동일한 Streamlit 세션에서 버튼 재시도 시에는 새 계정을 만들지 않는다.
             response = client.auth.set_session(
                 existing_session.access_token,
                 existing_session.refresh_token,
             )
-
             session = response.session
 
         else:
@@ -522,11 +504,9 @@ def connect_cloud(create_new=False):
                     credentials["access_token"],
                     credentials["refresh_token"]
                 )
-
                 session = response.session
 
             elif create_new:
-                # 신규 계정은 명시적으로 사용자가 버튼을 눌렀을 때만 생성.
                 response = client.auth.sign_in_anonymously()
                 session = response.session
 
@@ -537,7 +517,6 @@ def connect_cloud(create_new=False):
                     "'기존 로그인 다시 확인'을 먼저 눌러봐. "
                     "새 계정이 정말 필요한 경우에만 계정을 생성해 줘."
                 )
-
                 return False
 
         if session is None or session.user is None:
@@ -547,11 +526,9 @@ def connect_cloud(create_new=False):
         set_cloud_error("로그인 복원 / 생성", exc)
         return False
 
-    # DB 조회가 실패해도 같은 세션을 유지하며, 새 계정을 만들지 않는다.
     old_user = st.session_state.get("supabase_user_id")
 
     if old_user and old_user != session.user.id:
-        # 계정이 변경된 경우 기존 사용자의 로컬 데이터 혼입 방지.
         for name, value in DEFAULT_DATA.items():
             st.session_state[name] = (
                 value.copy()
@@ -567,7 +544,6 @@ def connect_cloud(create_new=False):
 
     try:
         load_data(client, session.user.id)
-
     except Exception as exc:
         set_cloud_error("테이블 조회 / RLS", exc)
         return False
@@ -650,15 +626,13 @@ def save_and_refresh():
         st.rerun()
 
 
-# 최초 접속에서는 브라우저의 쿠키를 복원만 시도하고 새 계정은 생성하지 않는다.
-# 새로고침으로 session_state가 초기화되더라도 새 익명 ID가 생기지 않는다.
 if not st.session_state.get("auth_initial_attempted", False):
     st.session_state.auth_initial_attempted = True
     connect_cloud(create_new=False)
 
 
 # =====================================================
-# 6. 공통 함수
+# 5. 공통 함수
 # =====================================================
 
 def expiry_days(expiry):
@@ -677,9 +651,6 @@ def expiry_status(expiry):
     if remaining == 0:
         return "오늘 확인"
 
-    if remaining <= 3:
-        return f"D-{remaining}"
-
     return f"D-{remaining}"
 
 
@@ -688,136 +659,14 @@ def open_page(page):
     st.rerun()
 
 
-def show_food_card(item):
-    """HTML을 사용하지 않는 재료 카드"""
-
-    with st.container(border=True):
-        col1, col2 = st.columns([4, 1])
-
-        with col1:
-            st.subheader(f"🥬 {item['name']}")
-            st.caption(
-                f"{item['category']} · {item['storage']} 보관"
-            )
-
-        with col2:
-            st.metric(
-                "날짜",
-                expiry_status(item["expiry"])
-            )
-
-        st.write(f"**수량:** {item['quantity']}")
-        st.write(f"**구매일:** {item['purchase_date']}")
-        st.write(f"**확인 날짜:** {item['expiry']}")
-
-        if item.get("note"):
-            st.caption(f"메모: {item['note']}")
-
-
-# =====================================================
-# 7. AI 레시피
-# =====================================================
-
-def generate_ai_recipes(
-    ingredients,
-    category,
-    max_time,
-    difficulty,
-    extra_request
-):
-    try:
-        api_key = st.secrets["OPENAI_API_KEY"]
-
-    except Exception:
-        raise ValueError(
-            "OPENAI_API_KEY가 없어. Streamlit Secrets를 확인해 줘."
-        )
-
-    client = OpenAI(api_key=api_key)
-    profile = st.session_state.get("profile") or {}
-
-    instructions = """
-너는 친절하고 꼼꼼한 한국어 요리 도우미야.
-
-사용자의 냉장고 재료를 최대한 활용해서 현실적인 요리를 추천해.
-
-규칙:
-1. 가지고 있는 재료를 최대한 활용한다.
-2. 없는 재료는 추가 재료로 구분한다.
-3. 조리 시간과 난이도를 지킨다.
-4. 재료 양은 1인분 기준으로 알려준다.
-5. 초보자도 이해할 수 있게 조리 과정을 자세히 쓴다.
-6. 대체 재료가 있으면 함께 알려준다.
-7. 알레르기와 특별 요청을 고려한다.
-8. 식품 안전을 함부로 단정하지 않는다.
-9. 2~3개의 레시피를 추천한다.
-10. 모든 답변은 한국어로 작성한다.
-11. 아래 알레르기 항목과 관련 소스, 가공식품은 요리에 사용하지 않는다.
-12. 피하고 싶은 재료는 알레르기와 별도로 반영하고 가능한 한 제외한다.
-13. 각 레시피에 알레르기 주의사항, 실제 제품 라벨과 교차접촉 확인 안내를 넣는다.
-14. 알레르기 안전을 보장한다고 단정하지 않는다.
-
-각 요리 형식:
-
-## 🍳 요리 이름
-
-한 줄 소개
-
-- 예상 조리 시간:
-- 난이도:
-- 음식 종류:
-
-### 필요한 재료
-재료와 분량
-
-### 추가로 필요한 재료
-부족한 재료 또는 없음
-
-### 조리 순서
-1.
-2.
-3.
-
-### 요리 팁
-맛있게 만드는 팁
-
-마지막에는 가장 추천하는 요리와 이유를 알려줘.
-"""
-
-    user_input = f"""
-사용 가능한 재료: {ingredients}
-음식 종류: {category}
-최대 조리 시간: {max_time}분
-난이도: {difficulty}
-추가 요청: {extra_request or "없음"}
-알레르기 항목: {", ".join(profile.get("allergies", [])) or "없음"}
-기타 알레르기: {profile.get("other_allergies") or "없음"}
-피하고 싶은 재료: {profile.get("avoid_ingredients") or "없음"}
-"""
-
-    response = client.responses.create(
-        model="gpt-5.5",
-        instructions=instructions,
-        input=user_input
-    )
-
-    return response.output_text
-
-
-# =====================================================
-# 8. 개편 공통 함수
-# =====================================================
-
 def safe_expiry_days(item):
     try:
         return expiry_days(item.get("expiry", date.today()))
-
     except Exception:
         return 9999
 
 
 def usable_fridge_items():
-    """날짜가 지난 재료는 자동 추천 재료에서 제외하고 별도 확인하도록 한다."""
     return [
         x for x in st.session_state.fridge_items
         if safe_expiry_days(x) >= 0
@@ -850,6 +699,172 @@ def ingredient_label(item):
         f"{item.get('name', '이름 없음')} · "
         f"{item.get('quantity', '수량 미입력')} · {status}"
     )
+
+
+def show_food_card(item):
+    with st.container(border=True):
+        left, right = st.columns([4, 1])
+
+        with left:
+            st.subheader(f"🥬 {item.get('name', '이름 없음')}")
+            st.caption(
+                f"{item.get('category', '기타')} · "
+                f"{item.get('storage', '보관 정보 없음')} 보관"
+            )
+
+        with right:
+            st.metric(
+                "날짜",
+                expiry_status(item.get("expiry", date.today()))
+            )
+
+        st.write(f"**수량:** {item.get('quantity', '미입력')}")
+        st.write(f"**구매일:** {item.get('purchase_date', '미입력')}")
+        st.write(f"**소비기한/확인 날짜:** {item.get('expiry', '미입력')}")
+
+        if item.get("note"):
+            st.caption(f"메모: {item['note']}")
+
+
+# =====================================================
+# 6. AI 레시피 생성
+# =====================================================
+
+def generate_ai_recipes(
+    ingredients,
+    category,
+    max_time,
+    difficulty,
+    extra_request,
+    strict_selected=False,
+    urgent_names=None,
+    allow_substitutes=True
+):
+    api_key = str(st.secrets.get("OPENAI_API_KEY", "")).strip()
+
+    if not api_key:
+        raise ValueError(
+            "OPENAI_API_KEY가 없어. Streamlit Secrets에 "
+            "올바른 API 키가 등록되어 있는지 확인해 줘."
+        )
+
+    profile = st.session_state.get("profile") or {}
+    urgent_names = urgent_names or []
+
+    if strict_selected:
+        ingredient_rule = (
+            "사용자가 선택한 재료만 사용해. 목록에 없는 식재료를 "
+            "필수 재료로 추가하지 마. 물, 소금, 후추, 식용유 등 "
+            "기본 조미료도 사용 가능하다고 가정하지 말고, "
+            "선택 재료만으로 가능한 조리법을 우선 제안해."
+        )
+
+    elif allow_substitutes:
+        ingredient_rule = (
+            "보유 재료를 최대한 활용하되 부족한 재료가 있으면 "
+            "대체 재료를 구체적으로 제안해. 대체 재료는 냉장고에 "
+            "이미 있는 재료를 우선으로 하고, 추가 구매가 필요한 "
+            "재료는 따로 표시해."
+        )
+
+    else:
+        ingredient_rule = (
+            "보유 재료 안에서만 요리해. 없는 재료를 추가하지 말고, "
+            "만들기 어려운 요리는 무리해서 추천하지 말고 부족한 점을 설명해."
+        )
+
+    instructions = f"""
+너는 친절하고 꼼꼼한 한국어 냉장고 파먹기 요리 도우미야.
+목표는 사용자가 이미 가진 식재료를 낭비하지 않고 현실적인 한 끼를 만드는 거야.
+
+반드시 지킬 규칙:
+1. {ingredient_rule}
+2. 소비기한이 임박한 재료를 우선 활용해.
+   임박 재료 목록: {", ".join(urgent_names) if urgent_names else "없음"}.
+3. 날짜가 지난 재료는 안전하다고 가정하거나 추천 재료에 넣지 마.
+4. 사용자가 적은 재료와 수량을 기준으로 1인분 분량을 현실적으로 제안해.
+5. 조리 시간과 난이도를 지켜.
+6. 초보자도 따라 할 수 있도록 순서를 구체적으로 써.
+7. 재료가 부족하면 무엇이 부족한지, 무엇으로 대체할 수 있는지,
+   맛이나 식감이 어떻게 달라지는지 설명해.
+8. 알레르기 항목과 관련 식재료를 사용하지 않는 방향으로 제안해.
+9. 피하고 싶은 재료도 가능한 한 제외해.
+10. 실제 제품의 원재료 표시와 교차접촉 확인이 필요하다고 안내해.
+11. 최대 3개의 서로 다른 요리를 추천하고, 가능한 재료 조합이 적으면
+    억지로 개수를 채우지 마.
+12. 모든 답변은 한국어로 작성해.
+13. 알레르기 안전을 보장한다고 말하지 마.
+
+각 레시피 형식:
+
+## 🍳 요리 이름
+
+한 줄 소개
+
+- 예상 조리 시간:
+- 난이도:
+- 활용하는 보유 재료:
+- 소비기한 임박 재료 활용 여부:
+
+### 필요한 재료와 분량
+
+### 부족한 재료
+없으면 '추가 재료 없음'이라고 표시
+
+### 대체 재료 제안
+
+### 조리 순서
+1.
+2.
+3.
+
+### 요리 팁
+
+### 주의사항
+
+마지막에는 가장 추천하는 요리와 그 이유를 알려줘.
+"""
+
+    user_input = f"""
+사용 가능한 재료와 수량:
+{ingredients}
+
+음식 종류: {category}
+최대 조리 시간: {max_time}분
+난이도: {difficulty}
+추가 요청: {extra_request or "없음"}
+
+알레르기 항목:
+{", ".join(profile.get("allergies", [])) or "없음"}
+
+기타 알레르기:
+{profile.get("other_allergies") or "없음"}
+
+피하고 싶은 재료:
+{profile.get("avoid_ingredients") or "없음"}
+"""
+
+    # 기존 모델 설정을 유지하고 실제 API 오류를 화면에서 확인할 수 있게 함.
+    client = OpenAI(
+        api_key=api_key,
+        timeout=60.0,
+        max_retries=1
+    )
+
+    response = client.responses.create(
+        model="gpt-5.5",
+        instructions=instructions,
+        input=user_input
+    )
+
+    result = response.output_text
+
+    if not result:
+        raise RuntimeError(
+            "OpenAI 응답은 받았지만 레시피 텍스트가 비어 있어."
+        )
+
+    return result
 
 
 def save_profile_from_form():
@@ -904,146 +919,14 @@ def save_profile_from_form():
 
         st.caption(
             "AI가 알레르기 안전을 보장할 수는 없어. "
-            "실제 제품의 원재료·알레르기 표시와 교차접촉 가능성을 반드시 확인해 줘."
+            "실제 제품의 원재료·알레르기 표시와 교차접촉 가능성을 확인해 줘."
         )
 
 
-def generate_ai_recipes(
-    ingredients,
-    category,
-    max_time,
-    difficulty,
-    extra_request,
-    strict_selected=False,
-    urgent_names=None,
-    allow_substitutes=True
-):
-    try:
-        api_key = st.secrets["OPENAI_API_KEY"]
+# =====================================================
+# 7. 메뉴명 이전 버전 호환
+# =====================================================
 
-    except Exception:
-        raise ValueError(
-            "OPENAI_API_KEY가 없어. Streamlit Secrets를 확인해 줘."
-        )
-
-    client = OpenAI(api_key=api_key)
-    profile = st.session_state.get("profile") or {}
-    urgent_names = urgent_names or []
-
-    if strict_selected:
-        ingredient_rule = (
-            "사용자가 선택한 재료만 사용해. 목록에 없는 식재료를 필수 재료로 추가하지 마. "
-            "물, 소금, 후추, 식용유 등 기본 조미료도 사용 가능하다고 가정하지 말고, "
-            "필요하면 선택 재료만으로 가능한 조리법을 우선 제안해."
-        )
-
-    elif allow_substitutes:
-        ingredient_rule = (
-            "보유 재료를 최대한 활용하되 부족한 재료가 있으면 대체 재료를 구체적으로 제안해. "
-            "대체 재료는 냉장고에 이미 있는 재료를 우선으로 하고, "
-            "추가 구매가 필요한 재료는 따로 표시해."
-        )
-
-    else:
-        ingredient_rule = (
-            "보유 재료 안에서만 요리해. 없는 재료를 추가하지 말고, "
-            "만들기 어려운 요리는 무리해서 추천하지 말고 부족한 점을 설명해."
-        )
-
-    instructions = f"""
-너는 친절하고 꼼꼼한 한국어 냉장고 파먹기 요리 도우미야.
-목표는 사용자가 이미 가진 식재료를 낭비하지 않고 현실적인 한 끼를 만드는 거야.
-
-반드시 지킬 규칙:
-1. {ingredient_rule}
-2. 소비기한이 임박한 재료를 우선 활용해. 임박 재료 목록: {", ".join(urgent_names) if urgent_names else "없음"}.
-3. 소비기한 또는 확인 날짜가 지난 재료는 안전하다고 가정하거나 추천 재료에 넣지 마.
-4. 사용자가 적은 재료와 수량을 기준으로 1인분 분량을 현실적으로 제안해.
-5. 조리 시간과 난이도를 지켜.
-6. 초보자도 따라 할 수 있도록 순서를 구체적으로 써.
-7. 재료가 부족하면 무엇이 부족한지, 무엇으로 대체할 수 있는지, 맛이나 식감이 어떻게 달라지는지 설명해.
-8. 알레르기 항목과 기타 알레르기 관련 식재료를 사용하지 않는 방향으로 제안해. 알레르기 안전을 보장한다고 말하지 마.
-9. 피하고 싶은 재료도 가능한 한 제외해.
-10. 실제 제품의 원재료 표시와 교차접촉 확인이 필요하다고 안내해.
-11. 최대 3개의 서로 다른 요리를 추천하고, 가능한 재료 조합이 적으면 억지로 개수를 채우지 마.
-12. 모든 답변은 한국어로 작성해.
-
-각 레시피 형식:
-## 🍳 요리 이름
-한 줄 소개
-- 예상 조리 시간:
-- 난이도:
-- 활용하는 보유 재료:
-- 소비기한 임박 재료 활용 여부:
-
-### 필요한 재료와 분량
-### 부족한 재료
-없으면 '추가 재료 없음'이라고 표시
-### 대체 재료 제안
-대체 재료가 없으면 그렇게 표시
-### 조리 순서
-1.
-2.
-3.
-### 요리 팁
-### 주의사항
-
-마지막에는 가장 추천하는 요리와 그 이유를 알려줘.
-"""
-
-    user_input = f"""
-사용 가능한 재료와 수량:
-{ingredients}
-
-음식 종류: {category}
-최대 조리 시간: {max_time}분
-난이도: {difficulty}
-추가 요청: {extra_request or "없음"}
-알레르기 항목: {", ".join(profile.get("allergies", [])) or "없음"}
-기타 알레르기: {profile.get("other_allergies") or "없음"}
-피하고 싶은 재료: {profile.get("avoid_ingredients") or "없음"}
-"""
-
-    response = client.responses.create(
-        model="gpt-5.5",
-        instructions=instructions,
-        input=user_input
-    )
-
-    return response.output_text
-
-
-def show_food_card(item):
-    with st.container(border=True):
-        left, right = st.columns([4, 1])
-
-        with left:
-            st.subheader(f"🥬 {item.get('name', '이름 없음')}")
-            st.caption(
-                f"{item.get('category', '기타')} · "
-                f"{item.get('storage', '보관 정보 없음')} 보관"
-            )
-
-        with right:
-            st.metric(
-                "날짜",
-                expiry_status(item.get("expiry", date.today()))
-            )
-
-        st.write(f"**수량:** {item.get('quantity', '미입력')}")
-        st.write(f"**구매일:** {item.get('purchase_date', '미입력')}")
-        st.write(f"**소비기한/확인 날짜:** {item.get('expiry', '미입력')}")
-
-        if item.get("note"):
-            st.caption(f"메모: {item['note']}")
-
-
-def open_page(page):
-    st.session_state.selected_menu = page
-    st.rerun()
-
-
-# 기존 버전에서 저장된 메뉴명이 남아 있어도 새 메뉴로 자연스럽게 이동
 if st.session_state.get("selected_menu") in (
     "대시보드", "AI 레시피", "나의 요리책", "내 정보"
 ):
@@ -1056,7 +939,7 @@ if st.session_state.get("selected_menu") in (
 
 
 # =====================================================
-# 9. 사이드바
+# 8. 사이드바
 # =====================================================
 
 pages = [
@@ -1201,6 +1084,7 @@ with st.sidebar:
 
     st.caption("Fresh food, better days.")
 
+
 if not st.session_state.cloud_ready:
     st.warning(
         "클라우드 연결이 확인되지 않았어. 지금 수정한 내용은 저장되지 않을 수 있어. "
@@ -1209,13 +1093,14 @@ if not st.session_state.cloud_ready:
 
 
 # =====================================================
-# 10. 냉장고 홈
+# 9. 냉장고 홈
 # =====================================================
 
 if st.session_state.selected_menu == "냉장고 홈":
     items = st.session_state.fridge_items
     groceries = st.session_state.grocery_items
     urgent = urgent_fridge_items()
+
     expired = [
         x for x in items
         if safe_expiry_days(x) < 0
@@ -1267,7 +1152,6 @@ if st.session_state.selected_menu == "냉장고 홈":
             use_container_width=True
         ):
             open_page("냉장고 파먹기")
-
     else:
         st.info("먼저 '내 냉장고'에서 재료를 등록해 줘.")
 
@@ -1296,7 +1180,6 @@ if st.session_state.selected_menu == "냉장고 홈":
                     st.caption(
                         f"날짜: {item.get('expiry', '미입력')}"
                     )
-
     else:
         st.info(
             "아직 냉장고가 비어 있어요. 첫 번째 재료를 등록해 보세요!"
@@ -1320,7 +1203,7 @@ if st.session_state.selected_menu == "냉장고 홈":
 
 
 # =====================================================
-# 11. 내 냉장고
+# 10. 내 냉장고
 # =====================================================
 
 elif st.session_state.selected_menu == "내 냉장고":
@@ -1398,7 +1281,6 @@ elif st.session_state.selected_menu == "내 냉장고":
     if submitted:
         if not name.strip():
             st.warning("재료 이름을 입력해 주세요.")
-
         else:
             st.session_state.fridge_items.append({
                 "id": str(uuid.uuid4()),
@@ -1535,7 +1417,6 @@ elif st.session_state.selected_menu == "내 냉장고":
                     if update:
                         if not new_name.strip():
                             st.warning("재료 이름을 입력해 주세요.")
-
                         else:
                             item.update({
                                 "name": new_name.strip(),
@@ -1558,7 +1439,7 @@ elif st.session_state.selected_menu == "내 냉장고":
 
 
 # =====================================================
-# 12. 냉장고 파먹기
+# 11. 냉장고 파먹기
 # =====================================================
 
 elif st.session_state.selected_menu == "냉장고 파먹기":
@@ -1602,7 +1483,6 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                         st.caption(
                             f"수량: {item.get('quantity', '미입력')}"
                         )
-
         else:
             st.success(
                 "현재 3일 이내로 등록된 임박 재료는 없어."
@@ -1659,7 +1539,6 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                         for x in selected_items
                     )
                 )
-
             else:
                 st.warning(
                     "추천에 사용할 수 있는 재료가 없어. "
@@ -1680,7 +1559,6 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                     labels[x]
                     for x in chosen_labels
                 ]
-
             else:
                 selected_items = []
                 st.warning(
@@ -1739,7 +1617,6 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                 st.warning(
                     "먼저 사용할 재료를 선택하거나 냉장고에 재료를 등록해 줘."
                 )
-
             else:
                 ingredient_text = "\n".join(
                     f"- {x.get('name')} / "
@@ -1772,19 +1649,55 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                         )
 
                         st.session_state.recipe_results = result
-                        save_data()
+
+                        # AI 생성 자체와 Supabase 저장을 구분
+                        if st.session_state.cloud_ready:
+                            save_data()
+                        else:
+                            st.warning(
+                                "레시피는 생성됐지만 클라우드 연결이 없어 "
+                                "저장하지 못했어."
+                            )
 
                     except ValueError as e:
                         st.error(str(e))
 
-                    except OpenAIError:
-                        st.error(
-                            "AI 요청에 실패했어. "
-                            "OpenAI API 키와 사용 설정을 확인해 줘."
+                    except OpenAIError as e:
+                        st.error("OpenAI API 요청에 실패했어.")
+                        st.write(
+                            "**오류 종류:**",
+                            type(e).__name__
+                        )
+                        st.write(
+                            "**오류 내용:**",
+                            str(e)
+                        )
+
+                        status_code = getattr(e, "status_code", None)
+                        error_code = getattr(e, "code", None)
+                        request_id = getattr(e, "request_id", None)
+
+                        if status_code:
+                            st.write("**HTTP 상태 코드:**", status_code)
+
+                        if error_code:
+                            st.write("**오류 코드:**", error_code)
+
+                        if request_id:
+                            st.write("**요청 ID:**", request_id)
+
+                        st.caption(
+                            "API 키, 모델 접근 권한, API 사용량 및 결제 설정 등을 "
+                            "오류 내용에 따라 확인해야 해."
                         )
 
                     except Exception as e:
-                        st.error(f"오류가 발생했어: {e}")
+                        st.error("예상하지 못한 오류가 발생했어.")
+                        st.write(
+                            "**오류 종류:**",
+                            type(e).__name__
+                        )
+                        st.exception(e)
 
         if st.session_state.get("recipe_results"):
             st.divider()
@@ -1806,7 +1719,7 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
 
 
 # =====================================================
-# 13. 소비기한 관리
+# 12. 소비기한 관리
 # =====================================================
 
 elif st.session_state.selected_menu == "소비기한 관리":
@@ -1856,7 +1769,6 @@ elif st.session_state.selected_menu == "소비기한 관리":
 
         if not group:
             st.caption("해당하는 재료가 없어요.")
-
         else:
             for item in sorted(group, key=safe_expiry_days):
                 show_food_card(item)
@@ -1872,7 +1784,7 @@ elif st.session_state.selected_menu == "소비기한 관리":
 
 
 # =====================================================
-# 14. 장보기 목록
+# 13. 장보기 목록
 # =====================================================
 
 elif st.session_state.selected_menu == "장보기 목록":
@@ -1911,7 +1823,6 @@ elif st.session_state.selected_menu == "장보기 목록":
             })
 
             save_and_refresh()
-
         else:
             st.warning("재료 이름을 입력해 줘.")
 
@@ -1921,7 +1832,6 @@ elif st.session_state.selected_menu == "장보기 목록":
 
     if not groceries:
         st.info("장보기 목록이 비어 있어.")
-
     else:
         for i, item in enumerate(groceries):
             with st.container(border=True):
@@ -1973,7 +1883,7 @@ elif st.session_state.selected_menu == "장보기 목록":
 
 
 # =====================================================
-# 15. 하단
+# 14. 하단
 # =====================================================
 
 st.divider()
