@@ -1,7 +1,5 @@
-
 streamlit
 pandas
 openai
-groq
 supabase
 streamlit-cookies-controller
