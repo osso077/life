@@ -652,7 +652,7 @@ def food_emoji(item):
     ]:
         if any(word in name for word in words):
             return emoji
-    return {"채소": "🥬", "과일": "🍎", "육류": "🥩", "해산물": "🐟",
+    return {"채소": "🥬", "과일": "🍎", "난류(계란)": "🥚", "육류": "🥩", "해산물": "🐟",
             "유제품": "🥛", "곡류·면류": "🍚", "소스·양념": "🧂",
             "가공식품": "🥫"}.get(item.get("category"), "🍽️")
 
@@ -814,8 +814,31 @@ def fridge_visual_html(items, compact=False):
     room = sorted((x for x in items if x.get("storage") == "실온"), key=sort_key)
     produce = [x for x in chilled if x.get("category") in ("채소", "과일")]
     chilled_other = [x for x in chilled if x.get("category") not in ("채소", "과일")]
-    top_shelf = chilled_other[::2]
-    bottom_shelf = chilled_other[1::2]
+
+    # Display recommendation only; it is not a record of actual shelf position.
+    # Raw meat and seafood go on the lower shelf to reduce cross-contamination
+    # risk from leaking juices. Eggs, dairy and ready-to-eat foods go above.
+    def lower_shelf_candidate(item):
+        if item.get("food_state") == "조리 후 보관":
+            return False
+        name = re.sub(r"\s+", "", str(item.get("name", "")).lower())
+        prepared = (
+            "익힌", "삶은", "조리", "구이", "볶음", "찌개", "탕", "국",
+            "도시락", "완제품", "레토르트", "통조림", "캔", "훈제", "소시지",
+            "베이컨", "햄", "어묵", "육포", "너겟", "참치마요", "치킨너겟",
+        )
+        if any(word in name for word in prepared):
+            return False
+        raw_terms = (
+            "삼겹", "목살", "항정", "소고기", "쇠고기", "한우", "돼지고기",
+            "닭고기", "닭가슴살", "닭다리", "생닭", "생오리", "스테이크",
+            "다짐육", "다진고기", "갈비", "연어", "고등어", "생선", "광어",
+            "대구", "조기", "새우", "오징어", "조개", "굴", "전복", "회",
+        )
+        return item.get("category") in ("육류", "해산물") or any(word in name for word in raw_terms)
+
+    bottom_shelf = [x for x in chilled_other if lower_shelf_candidate(x)]
+    top_shelf = [x for x in chilled_other if not lower_shelf_candidate(x)]
     pantry_top = room[::2]
     pantry_bottom = room[1::2]
     limit = 4 if compact else None
@@ -877,8 +900,8 @@ def fridge_visual_html(items, compact=False):
         '<div class="fm-appliance-head"><span>🧊 MY FRIDGE</span>'
         f'<span class="fm-brand-tag">{total} ITEMS</span></div>'
         + section("❄️ 냉동실", freezer, "fm-freezer")
-        + section("🥛 냉장실 · 윗선반", top_shelf, "fm-chill")
-        + section("🧀 냉장실 · 아랫선반", bottom_shelf, "fm-chill-bottom")
+        + section("🥛 냉장실 · 윗선반 (계란·유제품·일반식품)", top_shelf, "fm-chill")
+        + section("🥩 냉장실 · 아랫선반 (육류·해산물)", bottom_shelf, "fm-chill-bottom")
         + section("🥬 신선 보관 서랍", produce, "fm-crisper")
         + '<div class="fm-appliance-foot"><span>FRIDGE MATE</span><span>Fresh food, better days.</span></div>'
         '</div>'
@@ -889,7 +912,7 @@ def fridge_visual_html(items, compact=False):
         '<div class="fm-viz-key">'
         '<span>🚨 알레르기 참고 알림</span><span>⏰ 날짜 임박</span><span>⚠ 날짜 경과</span><span>🍃 보관 점검</span>'
         '</div>'
-        '<div class="fm-viz-note">보관 위치는 등록 정보로 표시돼요. 실제 제품별 적절한 보관 방법은 확인해 주세요.</div>'
+        '<div class="fm-viz-note">선반 위치는 재료 종류에 따른 권장 표시예요. 육류·해산물은 밀폐해 아래쪽에 보관하고, 제품별 보관 지침을 확인해 주세요.</div>'
         '</div>'
     )
 
@@ -1137,7 +1160,9 @@ def ingredient_allergy_flags(item):
     name = str(item.get("name", "")).replace(" ", "").lower()
     labels = []
     for allergen in profile.get("allergies", []):
-        if any(token in name for token in ALLERGY_WORDS.get(allergen, ())):
+        category_matches = (allergen == "난류(계란)" and item.get("category") == "난류(계란)")
+        name_matches = any(token in name for token in ALLERGY_WORDS.get(allergen, ()))
+        if category_matches or name_matches:
             labels.append(allergen)
     other = re.split(r"[,，/\n]", profile.get("other_allergies", ""))
     if any(x.strip().replace(" ", "").lower() in name
@@ -1501,7 +1526,7 @@ elif st.session_state.selected_menu == "내 냉장고":
             category = st.selectbox(
                 "카테고리",
                 [
-                    "채소", "과일", "육류", "해산물",
+                    "채소", "과일", "난류(계란)", "육류", "해산물",
                     "유제품", "곡류·면류", "소스·양념",
                     "가공식품", "기타"
                 ]
@@ -1625,7 +1650,7 @@ elif st.session_state.selected_menu == "내 냉장고":
                         )
 
                         categories = [
-                            "채소", "과일", "육류", "해산물",
+                            "채소", "과일", "난류(계란)", "육류", "해산물",
                             "유제품", "곡류·면류", "소스·양념",
                             "가공식품", "기타"
                         ]
@@ -2179,7 +2204,7 @@ elif st.session_state.selected_menu == "장보기 목록":
                     with st.expander("🥬 구매한 재료를 냉장고에 등록"):
                         with st.form(f"move_grocery_{item.get('id', i)}"):
                             cat = st.selectbox("카테고리", [
-                                "채소", "과일", "육류", "해산물", "유제품",
+                                "채소", "과일", "난류(계란)", "육류", "해산물", "유제품",
                                 "곡류·면류", "소스·양념", "가공식품", "기타"
                             ])
                             storage = st.selectbox("보관 장소", ["냉장", "냉동", "실온"])
