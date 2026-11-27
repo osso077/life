@@ -180,6 +180,8 @@ footer {
 .fm-food {display:flex;align-items:center;gap:5px;max-width:100%;background:white;border:1px solid #e0ebe0;box-shadow:0 2px 4px rgba(30,50,30,.035);border-radius:12px;padding:6px 8px;line-height:1.25;}
 .fm-food.fm-alert {border-color:#efc3be;background:#fff4f2;}
 .fm-food.fm-soon {border-color:#f0d6a9;background:#fff9ec;}
+.fm-food.fm-risk {border-color:#e2b885;background:#fff9ef;}
+.fm-food.fm-risk-high {border-color:#df977d;background:#fff1e9;}
 .fm-food.fm-allergy {border-color:#dca6b3;background:#fff1f4;}
 .fm-food-emoji {font-size:20px;line-height:1;flex-shrink:0;}
 .fm-food-text {display:flex;min-width:0;flex-direction:column;gap:3px;}
@@ -187,6 +189,8 @@ footer {
 .fm-food-sub {font-size:10px;color:#7a8c80;overflow-wrap:anywhere;}
 .fm-food-badge {font-weight:750;color:#a94c40;font-size:10px;}
 .fm-food.fm-soon .fm-food-badge {color:#a37727;}
+.fm-food.fm-risk .fm-food-badge {color:#9f642b;}
+.fm-food.fm-risk-high .fm-food-badge {color:#a34b30;}
 .fm-food.fm-allergy .fm-food-badge {color:#a04058;}
 .fm-food-empty {font-size:12px;color:#93a59c;padding:7px 3px;}
 .fm-more {font-size:11px;font-weight:700;color:#5a7b61;background:#e8f0e7;padding:6px 9px;border-radius:99px;align-self:center;}
@@ -375,6 +379,11 @@ def normalized_data(data):
     for food in cleaned["fridge_items"]:
         food["purchase_date"] = parse_date(food.get("purchase_date"))
         food["expiry"] = parse_date(food.get("expiry"))
+        # 예전 자료에 아래 필드가 없어도 이전 데이터는 그대로 유지돼.
+        state = food.get("food_state", "일반")
+        food["food_state"] = state if state in ("일반", "개봉", "조리 후 보관") else "일반"
+        when = food.get("state_date")
+        food["state_date"] = parse_date(when) if when and food["food_state"] != "일반" else None
     result = data.get("recipe_results")
     cleaned["recipe_results"] = result if isinstance(result, str) else None
     profile = data.get("profile")
@@ -398,6 +407,10 @@ def serialize_data():
     for item in payload["fridge_items"]:
         for field in ("expiry", "purchase_date"):
             item[field] = parse_date(item.get(field)).isoformat()
+        item["state_date"] = (
+            parse_date(item["state_date"]).isoformat()
+            if item.get("state_date") and item.get("food_state") != "일반" else None
+        )
     return payload
 
 
@@ -667,8 +680,117 @@ def show_food_card(item):
 
         if item.get("note"):
             st.caption(f"메모: {item['note']}")
+        if item.get("food_state", "일반") != "일반":
+            st.caption(f"상태: {item['food_state']} · 관련 날짜: {item.get('state_date') or '미입력'}")
+        advisory = freshness_notice(item)
+        if advisory:
+            st.caption(f"🍃 {advisory['title']} · {advisory['detail']}")
 
 
+
+
+
+
+# =====================================================
+# 5-1. 보관 상태 점검 알림
+# 식품 안전 판정이 아닌 참고 알림. 원물/생식재료라는 가정이 맞지
+# 않는 가공·살균·진공포장 제품은 제품의 표시사항을 우선 확인.
+# 냉장 4°C 이하를 전제로 한 FoodSafety.gov의 일반 보관 안내 참고:
+# https://www.foodsafety.gov/food-safety-charts/cold-food-storage-charts
+# =====================================================
+FOOD_STATES = ["일반", "개봉", "조리 후 보관"]
+
+
+def freshness_notice(item, today=None):
+    """문제 가능성에 대한 점검 제안만 반환하며 먹어도 되는지 판정하지 않는다."""
+    today = today or date.today()
+    storage = str(item.get("storage", ""))
+    if storage == "냉동":
+        # 실제로 계속 -18°C 이하에서 냉동됐는지 알 수 없으므로 알림 없음=안전이 아님
+        return None
+
+    raw_name = str(item.get("name", ""))
+    name = re.sub(r"\s+", "", raw_name.lower())
+    category = str(item.get("category", ""))
+    state = item.get("food_state", "일반")
+    if state not in FOOD_STATES:
+        state = "일반"
+    started = (item.get("state_date") if state != "일반" else None) or item.get("purchase_date")
+    age = max(0, (today - parse_date(started)).days)
+
+    def notice(level, title, detail, kind="보관 상태 점검", elapsed=None):
+        return {"level": level, "title": title, "detail": detail, "kind": kind,
+                "days": age if elapsed is None else elapsed}
+
+    # 가공/조리/통조림 등은 생식품 보관 기간을 일괄 적용하지 않는다.
+    processed = any(x in name for x in (
+        "통조림", "캔", "훈제", "소시지", "햄", "베이컨", "육포", "냉동식품",
+        "살균", "멸균", "젓갈", "새우젓", "어묵", "치킨너겟", "닭가슴살소시지",
+        "구이", "볶음", "조림", "삶은", "익힌", "레토르트", "즉석", "완제품", "육수"
+    ))
+    dairy = any(x in name for x in ("우유", "요거트", "요구르트", "생크림", "크림치즈"))
+    seafood = category == "해산물" or any(x in name for x in (
+        "생선", "고등어", "연어", "광어", "대구", "조기", "삼치", "참치", "회",
+        "새우", "오징어", "굴", "홍합", "조개", "전복", "가리비", "낙지"
+    ))
+    poultry = any(x in name for x in ("생닭", "닭고기", "닭가슴살", "닭다리", "오리고기", "생오리"))
+    ground_meat = any(x in name for x in ("다짐육", "다진고기", "다진소고기", "다진돼지고기", "민찌", "다진육"))
+    meat = category == "육류" or any(x in name for x in (
+        "삼겹살", "목살", "항정살", "소고기", "쇠고기", "돼지고기", "한우", "차돌", "스테이크", "갈비"
+    ))
+    raw_perishable = not processed and (seafood or poultry or ground_meat or meat)
+
+    # 냉장이 필요한 식품이 실온에 기록된 경우 시간을 추정하지 않고 확인을 요청.
+    if storage == "실온":
+        if state == "조리 후 보관" or raw_perishable:
+            return notice("높음", "실온 보관 상태 확인", "육류·수산물이나 조리 음식이 실온으로 등록돼 있어요. 노출 시간과 제품 표시를 즉시 확인해 주세요.")
+        if state == "개봉" and dairy:
+            return notice("높음", "개봉한 유제품 보관 확인", "개봉한 유제품이 실온으로 등록돼 있어요. 제품 보관 지침과 실온 노출 시간을 확인해 주세요.")
+        return None
+    if storage != "냉장":
+        return None
+
+    if state == "조리 후 보관":
+        if age >= 3:
+            return notice("높음" if age >= 4 else "점검", "조리한 음식 보관 기간 확인",
+                          f"조리일로부터 {age}일 지났어요. 냉장 보관한 남은 음식은 일반적으로 3~4일 내 확인·소비가 권장돼요.")
+        return None
+
+    def by_window(first, last, label):
+        # 생식재료는 개봉일을 새 보관 시작일로 취급하지 않는다.
+        purchase_age = max(0, (today - parse_date(item.get("purchase_date"))).days)
+        if purchase_age < first:
+            return None
+        return notice("높음" if purchase_age >= last else "점검", f"{label} 신선도 확인",
+                      f"구매일 기준 {purchase_age}일 경과했어요. 일반적인 냉장 보관 참고 기간은 {first}~{last}일이에요. 제품 상태·표시를 확인해 주세요.", elapsed=purchase_age)
+
+    if not processed:
+        if ground_meat:
+            return by_window(1, 2, "다짐육")
+        if poultry:
+            return by_window(1, 2, "생닭·가금류")
+        if seafood:
+            return by_window(1, 2, "생선·해산물")
+        if meat:
+            return by_window(3, 5, "생고기")
+
+    if state == "개봉" and dairy and age >= 3:
+        return notice("점검", "개봉한 유제품 확인",
+                      f"개봉한 지 {age}일 지났어요. 개봉 후 보관 기간은 제품마다 달라요. 표시된 개봉 후 보관 방법을 확인해 주세요.")
+
+    # 잎채소/버섯/딸기는 균일한 안전 기한을 설정하지 않고 상태 확인만 권유.
+    delicate = any(x in name for x in ("상추", "깻잎", "시금치", "콩나물", "숙주", "버섯", "딸기", "라즈베리"))
+    if not processed and delicate and age >= 3:
+        return notice("점검", "무르기 쉬운 신선식품 점검",
+                      f"구매일 기준 {age}일 경과했어요. 짓무름·곰팡이·누액·보관 온도를 확인해 주세요. 재료별 실제 보관 가능 기간은 달라요.", "신선도 점검")
+    return None
+
+
+def freshness_alerts(items):
+    result = [(item, freshness_notice(item)) for item in items]
+    result = [(item, alert) for item, alert in result if alert]
+    return sorted(result, key=lambda pair: (0 if pair[1]["level"] == "높음" else 1,
+                                                  -pair[1]["days"], str(pair[0].get("name", ""))))
 
 
 # =====================================================
@@ -704,6 +826,7 @@ def fridge_visual_html(items, compact=False):
         emoji = html_escape(food_emoji(item))
         days = safe_expiry_days(item)
         flags = ingredient_allergy_flags(item)
+        freshness = freshness_notice(item)
         classes = ["fm-food"]
         badges = []
         if flags:
@@ -715,6 +838,9 @@ def fridge_visual_html(items, compact=False):
         elif days <= 3:
             classes.append("fm-soon")
             badges.append("⏰ 오늘 확인" if days == 0 else f"⏰ D-{days}")
+        if freshness:
+            classes.append("fm-risk-high" if freshness["level"] == "높음" else "fm-risk")
+            badges.append("🍃 보관 점검")
         badge = "".join(f'<span class="fm-food-badge">{html_escape(t)}</span>' for t in badges)
         tooltip = html_escape(
             f"{item.get('name', '재료')} | {item.get('quantity', '')} | {item.get('expiry', '')}",
@@ -761,7 +887,7 @@ def fridge_visual_html(items, compact=False):
         + section("🧂 아랫선반", pantry_bottom)
         + '</div></div>'
         '<div class="fm-viz-key">'
-        '<span>🚨 알레르기 참고 알림</span><span>⏰ 날짜 임박</span><span>⚠ 날짜 경과</span>'
+        '<span>🚨 알레르기 참고 알림</span><span>⏰ 날짜 임박</span><span>⚠ 날짜 경과</span><span>🍃 보관 점검</span>'
         '</div>'
         '<div class="fm-viz-note">보관 위치는 등록 정보로 표시돼요. 실제 제품별 적절한 보관 방법은 확인해 주세요.</div>'
         '</div>'
@@ -1244,9 +1370,10 @@ if st.session_state.selected_menu == "냉장고 홈":
         for item in items
         if ingredient_allergy_flags(item)
     ]
+    freshness_warnings = freshness_alerts(items)
 
     st.title("오늘의 냉장고 🥬")
-    st.caption("꼭 확인해야 할 사항만 알려줄게요.")
+    st.caption("소비기한뿐 아니라 보관 중 확인이 필요한 재료도 알려줄게요.")
 
     # 알레르기 설정에 해당하는 재료가 등록되어 있을 때만 노출
     if allergy_alerts:
@@ -1264,6 +1391,24 @@ if st.session_state.selected_menu == "냉장고 홈":
             "재료 이름과 저장된 알레르기 설정을 비교한 참고 알림이에요. "
             "가공식품 원재료 표시와 교차접촉 여부를 반드시 직접 확인해 주세요."
         )
+
+    # 소비기한과 별개: 구매·개봉·조리 시점에 따른 보관 상태 점검
+    if freshness_warnings:
+        high = sum(1 for _, alert in freshness_warnings if alert["level"] == "높음")
+        label = f"🍃 신선도·보관 주의 · 확인할 재료 {len(freshness_warnings)}개"
+        if high:
+            st.warning(label + f" (우선 확인 {high}개)")
+        else:
+            st.info(label)
+        for item, alert in freshness_warnings[:4]:
+            st.write(f"{food_emoji(item)} **{item.get('name', '재료')}** · {alert['title']}")
+            st.caption(alert["detail"])
+        if len(freshness_warnings) > 4:
+            with st.expander(f"나머지 {len(freshness_warnings) - 4}개 보관 상태 알림 보기"):
+                for item, alert in freshness_warnings[4:]:
+                    st.write(f"• {food_emoji(item)} {item.get('name', '재료')} · {alert['title']}")
+                    st.caption(alert["detail"])
+        st.caption("일반적인 냉장 보관 기준을 이용한 점검 알림이에요. 식품 부패 여부를 자동 판단하지 않아요. 제품 표시와 실제 온도·상태를 우선 확인해 주세요.")
 
     # 날짜가 지난 재료는 임박 재료보다 먼저 알림
     if expired:
@@ -1296,7 +1441,7 @@ if st.session_state.selected_menu == "냉장고 홈":
                     st.write(f"• {item.get('name', '이름 없음')} · {when}")
 
     # 정상일 때는 통계·미리보기·바로가기 대신 한 줄만 표시
-    if not (allergy_alerts or expired or urgent):
+    if not (allergy_alerts or freshness_warnings or expired or urgent):
         if items:
             st.success("✅ 지금 확인해야 할 알림이 없어요.")
         else:
@@ -1383,9 +1528,18 @@ elif st.session_state.selected_menu == "내 냉장고":
                 value=date.today() + timedelta(days=7)
             )
 
+        st.caption("🍃 보관 상태 알림 정확도를 높이기 위한 선택 항목")
+        state_left, state_right = st.columns(2)
+        with state_left:
+            food_state = st.selectbox("식품 상태", FOOD_STATES,
+                                      help="일반은 구매일, 개봉/조리한 경우는 오른쪽 날짜를 기준으로 점검해요.")
+        with state_right:
+            state_date = st.date_input("개봉·조리 날짜 (해당할 때만)", value=date.today(),
+                                       help="식품 상태가 '일반'이면 이 날짜는 사용하지 않아요.")
+
         note = st.text_input(
             "메모",
-            placeholder="예: 개봉함, 요리하고 남은 재료"
+            placeholder="예: 냉장 배송, 포장 상태"
         )
 
         submitted = st.form_submit_button(
@@ -1407,6 +1561,8 @@ elif st.session_state.selected_menu == "내 냉장고":
                 "storage": storage,
                 "purchase_date": purchase_date,
                 "expiry": expiry,
+                "food_state": food_state,
+                "state_date": state_date if food_state != "일반" else None,
                 "note": note.strip()
             })
 
@@ -1524,6 +1680,18 @@ elif st.session_state.selected_menu == "내 냉장고":
                             key=f"expiry_{item.get('id', index)}"
                         )
 
+                        states = FOOD_STATES
+                        old_state = item.get("food_state", "일반")
+                        new_state = st.selectbox(
+                            "식품 상태", states,
+                            index=states.index(old_state) if old_state in states else 0,
+                            key=f"state_{item.get('id', index)}"
+                        )
+                        new_state_date = st.date_input(
+                            "개봉·조리 날짜 (해당할 때만)",
+                            value=parse_date(item.get("state_date") or date.today()),
+                            key=f"state_date_{item.get('id', index)}"
+                        )
                         new_note = st.text_input(
                             "메모",
                             value=item.get("note", "")
@@ -1542,6 +1710,8 @@ elif st.session_state.selected_menu == "내 냉장고":
                                 "storage": new_storage,
                                 "purchase_date": new_purchase,
                                 "expiry": new_expiry,
+                                "food_state": new_state,
+                                "state_date": new_state_date if new_state != "일반" else None,
                                 "note": new_note.strip()
                             })
 
@@ -2026,6 +2196,8 @@ elif st.session_state.selected_menu == "장보기 목록":
                                 "storage": storage,
                                 "purchase_date": bought,
                                 "expiry": expiry,
+                                "food_state": "일반",
+                                "state_date": None,
                                 "note": "장보기에서 옮긴 재료"
                             })
                             st.session_state.grocery_items.pop(i)
