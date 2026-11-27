@@ -6,6 +6,7 @@ import hashlib
 import secrets
 import re
 import base64
+from html import escape as html_escape
 from datetime import date, datetime, timedelta, timezone
 from openai import OpenAI, OpenAIError
 from supabase import create_client
@@ -159,6 +160,63 @@ hr {
 footer {
     visibility: hidden;
 }
+
+/* FRIDGE MATE | 냉장고 그림: Streamlit + HTML/CSS only */
+.fm-viz {margin: 6px 0 18px; color:#415244; font-family:inherit;}
+.fm-viz * {box-sizing:border-box;}
+.fm-viz-layout {display:grid;grid-template-columns:minmax(0,1.6fr) minmax(160px,.75fr);align-items:stretch;gap:18px;max-width:880px;margin:0 auto;}
+.fm-appliance {position:relative;border-radius:30px 30px 23px 23px;border:5px solid #d7e2dc;padding:14px 15px 16px;background:linear-gradient(120deg,#fdfefe,#eff5f0 75%,#e8f0eb);box-shadow:0 14px 32px rgba(62,81,62,.10),inset -6px -5px 12px rgba(197,213,201,.34);}
+.fm-appliance::before {content:"";position:absolute;top:22%;right:-5px;width:7px;height:24%;border-radius:6px;background:#b0beb7;opacity:.6;}
+.fm-appliance-head {display:flex;justify-content:space-between;align-items:center;padding:1px 6px 10px;font-weight:800;font-size:14px;color:#62796a;letter-spacing:.025em;}
+.fm-brand-tag {font-weight:700;font-size:10px;letter-spacing:.15em;color:#9baea0;}
+.fm-section {position:relative;padding:11px 12px 12px;background:linear-gradient(140deg,#ffffff,#f8fbf9);border:2px solid #dae6de;}
+.fm-section.fm-freezer {border-radius:15px 15px 11px 11px;min-height:105px;background:linear-gradient(140deg,#f4fbff,#e8f5fd);border-color:#ccdfeb;margin-bottom:10px;}
+.fm-section.fm-chill {border-radius:11px 11px 0 0;border-bottom:0;min-height:102px;}
+.fm-section.fm-chill-bottom {border-top:1px dashed #d2dcd5;border-radius:0;min-height:95px;}
+.fm-section.fm-crisper {border-radius:0 0 13px 13px;background:linear-gradient(#f7fbef,#edf5e8);border-color:#d8e5ce;min-height:103px;}
+.fm-section-heading {display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:10px;color:#5d7564;font-weight:800;font-size:13px;}
+.fm-section-count {display:inline-block;color:#7b9681;background:rgba(255,255,255,.75);font-size:11px;border:1px solid #dfebe3;border-radius:99px;padding:1px 7px;white-space:nowrap;}
+.fm-food-grid {display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;}
+.fm-food {display:flex;align-items:center;gap:5px;max-width:100%;background:white;border:1px solid #e0ebe0;box-shadow:0 2px 4px rgba(30,50,30,.035);border-radius:12px;padding:6px 8px;line-height:1.25;}
+.fm-food.fm-alert {border-color:#efc3be;background:#fff4f2;}
+.fm-food.fm-soon {border-color:#f0d6a9;background:#fff9ec;}
+.fm-food.fm-allergy {border-color:#dca6b3;background:#fff1f4;}
+.fm-food-emoji {font-size:20px;line-height:1;flex-shrink:0;}
+.fm-food-text {display:flex;min-width:0;flex-direction:column;gap:3px;}
+.fm-food-name {font-size:12px;color:#324739;font-weight:750;overflow-wrap:anywhere;}
+.fm-food-sub {font-size:10px;color:#7a8c80;overflow-wrap:anywhere;}
+.fm-food-badge {font-weight:750;color:#a94c40;font-size:10px;}
+.fm-food.fm-soon .fm-food-badge {color:#a37727;}
+.fm-food.fm-allergy .fm-food-badge {color:#a04058;}
+.fm-food-empty {font-size:12px;color:#93a59c;padding:7px 3px;}
+.fm-more {font-size:11px;font-weight:700;color:#5a7b61;background:#e8f0e7;padding:6px 9px;border-radius:99px;align-self:center;}
+.fm-appliance-foot {display:flex;justify-content:space-between;margin:10px 8px 0;color:#96a9a0;font-size:10px;}
+.fm-pantry {position:relative;background:linear-gradient(135deg,#f7f0e7,#eee2d4);border:4px solid #e1d3bd;box-shadow:0 12px 25px rgba(94,70,40,.06);border-radius:19px;padding:15px 13px;min-width:0;}
+.fm-pantry-header {font-size:14px;color:#8d7559;font-weight:850;padding:4px 3px 12px;}
+.fm-pantry .fm-section {background:#fffaf3;border:1px solid #e6dac8;border-bottom:5px solid #d6bea2;min-height:100px;border-radius:10px;margin-bottom:13px;}
+.fm-pantry .fm-section-heading {color:#917b61;}
+.fm-pantry .fm-section:last-child {margin-bottom:0;}
+.fm-viz-note {font-size:11px;color:#718074;text-align:center;margin:10px 0 0;}
+.fm-viz-key {display:flex;justify-content:center;flex-wrap:wrap;gap:6px 13px;color:#627669;font-size:11px;margin-top:9px;}
+.fm-viz-key span {white-space:nowrap;}
+.fm-viz-compact .fm-viz-layout {max-width:720px;gap:13px;}
+.fm-viz-compact .fm-appliance {padding:10px 11px 13px;border-width:4px;}
+.fm-viz-compact .fm-section {min-height:73px;padding:8px 10px;}
+.fm-viz-compact .fm-food {padding:5px 6px;}
+.fm-viz-compact .fm-food-emoji {font-size:17px;}
+.fm-viz-compact .fm-food-sub {font-size:9px;}
+.fm-viz-compact .fm-pantry {padding:10px;}
+.fm-viz-compact .fm-pantry .fm-section {min-height:76px;}
+.fm-viz-full .fm-food-grid {max-height:220px;overflow-y:auto;scrollbar-width:thin;}
+@media (max-width:620px) {
+ .fm-viz-layout {grid-template-columns:minmax(0,1fr);max-width:460px;gap:12px;}
+ .fm-appliance {padding:10px 11px 13px;}
+ .fm-pantry {padding:10px 12px;}
+ .fm-pantry .fm-section {min-height:70px;}
+ .fm-food-name {font-size:11px;}
+ .fm-viz-note {font-size:10px;}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -173,7 +231,6 @@ DEFAULT_DATA = {
     "saved_recipes": [],
     "recipe_results": None,
     "profile": {
-        "nickname": "",
         "allergies": [],
         "other_allergies": "",
         "avoid_ingredients": ""
@@ -322,7 +379,7 @@ def normalized_data(data):
     cleaned["recipe_results"] = result if isinstance(result, str) else None
     profile = data.get("profile")
     if isinstance(profile, dict):
-        for field in ("nickname", "other_allergies", "avoid_ingredients"):
+        for field in ("other_allergies", "avoid_ingredients"):
             cleaned["profile"][field] = str(profile.get(field, ""))[:500]
         allergies = profile.get("allergies", [])
         if isinstance(allergies, list):
@@ -612,6 +669,109 @@ def show_food_card(item):
             st.caption(f"메모: {item['note']}")
 
 
+
+
+# =====================================================
+# 5-1. 내 냉장고 시각화: 브라우저 자료를 그려주는 순수 HTML/CSS
+#     냉동칸/냉장선반/채소서랍 + 별도 실온 선반
+# =====================================================
+
+def fridge_visual_html(items, compact=False):
+    """보관 장소에 따라 실제 냉장고 형태로 칩을 배치한 HTML 문자열 반환.
+
+    단순 출력 기능이며 재료 데이터나 DB를 변경하지 않는다.
+    사용자 입력 이름과 수량은 HTML escape 처리해 코드 실행을 방지한다.
+    """
+    def sort_key(item):
+        days = safe_expiry_days(item)
+        flagged = bool(ingredient_allergy_flags(item))
+        return (0 if flagged else 1 if days < 0 else 2 if days <= 3 else 3, days)
+
+    freezer = sorted((x for x in items if x.get("storage") == "냉동"), key=sort_key)
+    chilled = sorted((x for x in items if x.get("storage") == "냉장"), key=sort_key)
+    room = sorted((x for x in items if x.get("storage") == "실온"), key=sort_key)
+    produce = [x for x in chilled if x.get("category") in ("채소", "과일")]
+    chilled_other = [x for x in chilled if x.get("category") not in ("채소", "과일")]
+    top_shelf = chilled_other[::2]
+    bottom_shelf = chilled_other[1::2]
+    pantry_top = room[::2]
+    pantry_bottom = room[1::2]
+    limit = 4 if compact else None
+
+    def chip(item):
+        name = html_escape(str(item.get("name", "재료")), quote=True)
+        quantity = html_escape(str(item.get("quantity", "미입력")), quote=True)
+        emoji = html_escape(food_emoji(item))
+        days = safe_expiry_days(item)
+        flags = ingredient_allergy_flags(item)
+        classes = ["fm-food"]
+        badges = []
+        if flags:
+            classes.append("fm-allergy")
+            badges.append("🚨 알레르기 확인")
+        if days < 0:
+            classes.append("fm-alert")
+            badges.append("⚠ 날짜 경과")
+        elif days <= 3:
+            classes.append("fm-soon")
+            badges.append("⏰ 오늘 확인" if days == 0 else f"⏰ D-{days}")
+        badge = "".join(f'<span class="fm-food-badge">{html_escape(t)}</span>' for t in badges)
+        tooltip = html_escape(
+            f"{item.get('name', '재료')} | {item.get('quantity', '')} | {item.get('expiry', '')}",
+            quote=True,
+        )
+        return (
+            f'<div class="{" ".join(classes)}" title="{tooltip}">'
+            f'<span class="fm-food-emoji" aria-hidden="true">{emoji}</span>'
+            f'<span class="fm-food-text"><span class="fm-food-name">{name}</span>'
+            f'<span class="fm-food-sub">{quantity}</span>{badge}</span></div>'
+        )
+
+    def section(title, foods, extra_class=""):
+        count = len(foods)
+        visible = foods[:limit] if limit is not None else foods
+        content = "".join(chip(item) for item in visible)
+        if count > len(visible):
+            content += f'<span class="fm-more">외 {count - len(visible)}개</span>'
+        if not count:
+            content = '<span class="fm-food-empty">아직 비어 있어요</span>'
+        return (
+            f'<div class="fm-section {extra_class}">'
+            f'<div class="fm-section-heading"><span>{title}</span>'
+            f'<span class="fm-section-count">{count}개</span></div>'
+            f'<div class="fm-food-grid">{content}</div></div>'
+        )
+
+    variant = "fm-viz-compact" if compact else "fm-viz-full"
+    total = len(items)
+    return (
+        f'<div class="fm-viz {variant}" role="group" aria-label="내 보관 재료 현황">'
+        '<div class="fm-viz-layout">'
+        '<div class="fm-appliance">'
+        '<div class="fm-appliance-head"><span>🧊 MY FRIDGE</span>'
+        f'<span class="fm-brand-tag">{total} ITEMS</span></div>'
+        + section("❄️ 냉동실", freezer, "fm-freezer")
+        + section("🥛 냉장실 · 윗선반", top_shelf, "fm-chill")
+        + section("🧀 냉장실 · 아랫선반", bottom_shelf, "fm-chill-bottom")
+        + section("🥬 신선 보관 서랍", produce, "fm-crisper")
+        + '<div class="fm-appliance-foot"><span>FRIDGE MATE</span><span>Fresh food, better days.</span></div>'
+        '</div>'
+        '<div class="fm-pantry"><div class="fm-pantry-header">🌿 실온 보관 선반</div>'
+        + section("🍞 윗선반", pantry_top)
+        + section("🧂 아랫선반", pantry_bottom)
+        + '</div></div>'
+        '<div class="fm-viz-key">'
+        '<span>🚨 알레르기 참고 알림</span><span>⏰ 날짜 임박</span><span>⚠ 날짜 경과</span>'
+        '</div>'
+        '<div class="fm-viz-note">보관 위치는 등록 정보로 표시돼요. 실제 제품별 적절한 보관 방법은 확인해 주세요.</div>'
+        '</div>'
+    )
+
+
+def render_fridge_visual(items, compact=False):
+    st.markdown(fridge_visual_html(items, compact=compact), unsafe_allow_html=True)
+
+
 # =====================================================
 # 6. Groq AI 레시피 생성
 # =====================================================
@@ -890,13 +1050,8 @@ def save_profile_from_form(expanded=False):
         "돼지고기", "쇠고기", "닭고기", "아황산류"
     ]
 
-    with st.expander("⚠️ 알레르기·요리 선호 설정", expanded=expanded):
+    with st.expander("⚠️ 알레르기 정보 설정", expanded=expanded):
         with st.form("foraging_profile_form"):
-            nickname = st.text_input(
-                "닉네임",
-                value=profile.get("nickname", "")
-            )
-
             allergies = st.multiselect(
                 "알레르기 유발 식재료",
                 allergy_choices,
@@ -917,13 +1072,12 @@ def save_profile_from_form(expanded=False):
             )
 
             submitted = st.form_submit_button(
-                "요리 안전·선호 설정 저장",
+                "알레르기 정보 저장",
                 use_container_width=True
             )
 
         if submitted:
             st.session_state.profile = {
-                "nickname": nickname.strip(),
                 "allergies": allergies,
                 "other_allergies": other_allergies.strip(),
                 "avoid_ingredients": avoid_ingredients.strip()
@@ -944,6 +1098,8 @@ if st.session_state.selected_menu == "대시보드":
     st.session_state.selected_menu = "냉장고 홈"
 if st.session_state.selected_menu == "AI 레시피":
     st.session_state.selected_menu = "냉장고 파먹기"
+if st.session_state.selected_menu == "내 정보":
+    st.session_state.selected_menu = "알레르기 정보"
 
 # =====================================================
 # 9. 사이드바 / 브라우저 데이터 진단과 백업
@@ -955,7 +1111,7 @@ pages = [
     ("소비기한 관리", "📅"),
     ("장보기 목록", "🛒"),
     ("나의 요리책", "📖"),
-    ("내 정보", "⚙️"),
+    ("알레르기 정보", "⚠️"),
 ]
 
 with st.sidebar:
@@ -1148,6 +1304,11 @@ if st.session_state.selected_menu == "냉장고 홈":
             if st.button("🥬 재료 등록하러 가기", use_container_width=True):
                 open_page("내 냉장고")
 
+    # 홈은 알림 우선: 간단한 냉장고 그림만 아래에 배치.
+    st.divider()
+    st.subheader("🧊 내 냉장고 한눈에 보기")
+    render_fridge_visual(items, compact=True)
+
     # 나머지 냉장고·레시피·장보기 기능은 좌측 메뉴에서 이용
 
 
@@ -1174,6 +1335,11 @@ elif st.session_state.selected_menu == "내 냉장고":
             f"{emoji} {storage} 보관",
             f"{sum(1 for x in items if x.get('storage') == storage)}개"
         )
+
+    st.divider()
+    st.subheader("🧊 냉장고 시각화")
+    st.caption("재료를 등록하거나 보관 장소를 바꾸면 냉장고 그림에도 바로 반영돼요.")
+    render_fridge_visual(items, compact=False)
 
     st.divider()
     st.subheader("➕ 새로운 재료 등록")
@@ -1912,13 +2078,12 @@ elif st.session_state.selected_menu == "나의 요리책":
 
 
 # =====================================================
-# 16. 내 정보 (기존 개인화 폼 유지)
+# 16. 알레르기 정보 (기존 알레르기·선호 설정 폼 유지)
 # =====================================================
 
-elif st.session_state.selected_menu == "내 정보":
-    st.title("내 정보 ⚙️")
-    st.caption("닉네임과 알레르기·기피 식재료를 설정하면 추천에 반영해.")
-    st.warning("학교 과제에서는 실제 건강정보 대신 예시 정보를 사용해 줘.")
+elif st.session_state.selected_menu == "알레르기 정보":
+    st.title("알레르기 정보 ⚠️")
+    st.caption("알레르기와 피하고 싶은 재료를 등록하면 요리 추천에 반영해.")
     save_profile_from_form(expanded=True)
 
 
