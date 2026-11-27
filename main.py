@@ -1073,115 +1073,82 @@ if not st.session_state.cloud_ready:
 
 
 # =====================================================
-# 10. 냉장고 홈
+# 10. 냉장고 홈 — 필요한 알림만 간결하게 표시
 # =====================================================
 
 if st.session_state.selected_menu == "냉장고 홈":
     items = st.session_state.fridge_items
-    groceries = st.session_state.grocery_items
-    urgent = urgent_fridge_items()
-
-    expired = [
-        x for x in items
-        if safe_expiry_days(x) < 0
+    expired = sorted(
+        [item for item in items if safe_expiry_days(item) < 0],
+        key=safe_expiry_days
+    )
+    urgent = urgent_fridge_items()  # 오늘부터 3일 이내까지
+    allergy_alerts = [
+        (item, ingredient_allergy_flags(item))
+        for item in items
+        if ingredient_allergy_flags(item)
     ]
 
     st.title("오늘의 냉장고 🥬")
-    st.caption(
-        "내가 가진 재료부터 확인하고, 버리는 재료 없이 맛있는 한 끼를 만들어 봐요."
-    )
-    st.divider()
+    st.caption("꼭 확인해야 할 사항만 알려줄게요.")
 
-    c1, c2, c3, c4 = st.columns(4)
+    # 알레르기 설정에 해당하는 재료가 등록되어 있을 때만 노출
+    if allergy_alerts:
+        st.error(f"🚨 알레르기 주의 · 확인할 재료 {len(allergy_alerts)}개")
+        for item, flags in allergy_alerts[:5]:
+            st.write(
+                f"{food_emoji(item)} **{item.get('name', '이름 없음')}**"
+                f" · 확인 항목: {', '.join(flags)}"
+            )
+        if len(allergy_alerts) > 5:
+            with st.expander(f"나머지 {len(allergy_alerts) - 5}개 재료 보기"):
+                for item, flags in allergy_alerts[5:]:
+                    st.write(f"• {item.get('name', '이름 없음')} · {', '.join(flags)}")
+        st.caption(
+            "재료 이름과 저장된 알레르기 설정을 비교한 참고 알림이에요. "
+            "가공식품 원재료 표시와 교차접촉 여부를 반드시 직접 확인해 주세요."
+        )
 
-    c1.metric("🥬 보관 중인 재료", f"{len(items)}개")
-    c2.metric("⏰ 3일 이내 확인", f"{len(urgent)}개")
-    c3.metric("⚠️ 날짜 확인 필요", f"{len(expired)}개")
-    c4.metric("🛒 장보기 항목", f"{len(groceries)}개")
-
-    st.caption(f"📖 요리책에 저장한 레시피 {len(st.session_state.saved_recipes)}개")
-
-    st.subheader("⏰ 먼저 사용하면 좋은 재료")
+    # 날짜가 지난 재료는 임박 재료보다 먼저 알림
+    if expired:
+        st.warning(f"⚠️ 날짜 확인 필요 · 기한이 지난 재료 {len(expired)}개")
+        for item in expired[:5]:
+            st.write(
+                f"{food_emoji(item)} **{item.get('name', '이름 없음')}**"
+                f" · {abs(safe_expiry_days(item))}일 경과"
+            )
+        if len(expired) > 5:
+            with st.expander(f"나머지 {len(expired) - 5}개 재료 보기"):
+                for item in expired[5:]:
+                    st.write(f"• {item.get('name', '이름 없음')} · {abs(safe_expiry_days(item))}일 경과")
+        st.caption(
+            "입력한 소비기한·확인 날짜를 기준으로 표시해요. "
+            "실제 제품 표시와 보관 상태를 확인하고, 의심스러운 식품은 먹지 마세요."
+        )
 
     if urgent:
-        for item in urgent:
-            show_food_card(item)
-    else:
-        st.success("3일 이내에 확인할 재료가 없어요!")
+        st.warning(f"⏰ 소비기한 임박 · 3일 이내 재료 {len(urgent)}개")
+        for item in urgent[:5]:
+            days = safe_expiry_days(item)
+            when = "오늘 확인" if days == 0 else f"D-{days}"
+            st.write(f"{food_emoji(item)} **{item.get('name', '이름 없음')}** · {when}")
+        if len(urgent) > 5:
+            with st.expander(f"나머지 {len(urgent) - 5}개 재료 보기"):
+                for item in urgent[5:]:
+                    days = safe_expiry_days(item)
+                    when = "오늘 확인" if days == 0 else f"D-{days}"
+                    st.write(f"• {item.get('name', '이름 없음')} · {when}")
 
-    if expired:
-        st.warning(
-            "날짜가 지난 것으로 등록된 재료가 있어. 자동 레시피 추천에서는 제외했어. "
-            "날짜가 지났다고 무조건 섭취 가능하거나 불가능하다고 단정할 수 없으니 "
-            "제품 표시와 보관 상태를 확인해 줘."
-        )
+    # 정상일 때는 통계·미리보기·바로가기 대신 한 줄만 표시
+    if not (allergy_alerts or expired or urgent):
+        if items:
+            st.success("✅ 지금 확인해야 할 알림이 없어요.")
+        else:
+            st.info("아직 등록한 재료가 없어요.")
+            if st.button("🥬 재료 등록하러 가기", use_container_width=True):
+                open_page("내 냉장고")
 
-        with st.expander("날짜 확인이 필요한 재료 보기"):
-            for item in sorted(expired, key=safe_expiry_days):
-                st.write(
-                    f"• {item.get('name')} — {item.get('expiry')}"
-                )
-
-    st.divider()
-    st.subheader("🍳 오늘의 냉장고 파먹기")
-    st.write(
-        "보유 재료를 바탕으로 만들 수 있는 요리를 AI에게 추천받아 보세요."
-    )
-
-    if items:
-        if st.button(
-            "내 재료로 요리 추천받기 →",
-            use_container_width=True
-        ):
-            open_page("냉장고 파먹기")
-    else:
-        st.info("먼저 '내 냉장고'에서 재료를 등록해 줘.")
-
-        if st.button(
-            "재료 등록하러 가기 →",
-            use_container_width=True
-        ):
-            open_page("내 냉장고")
-
-    st.divider()
-    st.subheader("🥗 냉장고 미리보기")
-
-    if items:
-        cols = st.columns(4)
-
-        for col, item in zip(cols, items[:8]):
-            with col:
-                with st.container(border=True):
-                    st.markdown(
-                        f"**{food_emoji(item)} {item.get('name', '이름 없음')}**"
-                    )
-                    st.caption(
-                        f"{item.get('storage', '')} · "
-                        f"{item.get('quantity', '')}"
-                    )
-                    st.caption(
-                        f"날짜: {item.get('expiry', '미입력')}"
-                    )
-    else:
-        st.info(
-            "아직 냉장고가 비어 있어요. 첫 번째 재료를 등록해 보세요!"
-        )
-
-    st.subheader("✨ 빠른 이동")
-
-    q1, q2, q3 = st.columns(3)
-
-    with q1:
-        if st.button("🥬 내 냉장고 관리", use_container_width=True):
-            open_page("내 냉장고")
-
-    with q2:
-        if st.button("📅 소비기한 확인", use_container_width=True):
-            open_page("소비기한 관리")
-
-    with q3:
-        if st.button("🛒 장보기 목록", use_container_width=True):
-            open_page("장보기 목록")
+    # 나머지 냉장고·레시피·장보기 기능은 좌측 메뉴에서 이용
 
 
 # =====================================================
