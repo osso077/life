@@ -207,7 +207,7 @@ for key, value in STORAGE_STATE.items():
 
 # =====================================================
 # 4. 브라우저 식별 및 Supabase 서버 전용 저장
-# - 회원가입 / 로그인 / Supabase Auth 호출 없음
+# - 사용자 계정 생성 없이 브라우저별 데이터 저장
 # - 브라우저 쿠키는 접근용 무작위 키. DB에는 SHA256 해시만 저장.
 # - Secret key는 Streamlit 서버 Secrets에만 보관.
 # =====================================================
@@ -961,7 +961,7 @@ pages = [
 with st.sidebar:
     st.caption("S M A R T   K I T C H E N")
     st.title("FRIDGE MATE 🥬")
-    st.caption("나만의 작은 키친 매니저 · 로그인 없음")
+    st.caption("나만의 작은 키친 매니저")
     st.divider()
 
     for menu, emoji in pages:
@@ -1068,7 +1068,7 @@ with st.sidebar:
     st.caption("Fresh food, better days.")
 
 if not st.session_state.cloud_ready:
-    st.info("사이드바에서 '이 브라우저에서 시작하기'를 누르면 로그인 없이 시작할 수 있어.")
+    st.info("사이드바에서 '이 브라우저에서 시작하기'를 눌러 냉장고를 이용해 줘.")
     st.stop()
 
 
