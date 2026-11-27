@@ -1031,6 +1031,8 @@ def generate_ai_recipes(
 대체 재료 섹션, 임박 재료 분석, 종합 순위, 마지막 총평은 절대 출력하지 않는다.
 
 각 요리의 출력 형식은 정확히 아래와 같다.
+각 요리 제목은 반드시 새 줄의 '## 🍳 요리 이름' 형식으로 시작한다.
+모든 요리는 별개의 제목으로 분리하고, 다른 요리의 내용을 이어 쓰지 않는다.
 
 ## 🍳 [요리 이름]
 
@@ -1162,20 +1164,43 @@ def ingredient_allergy_flags(item):
 
 
 def individual_recipes(result):
-    """원본 Groq Markdown 형식을 유지하면서 요리별 저장만 가능하게 분할."""
-    pattern = re.compile(r"(?m)^##\s*🍳\s*(.+?)\s*$")
-    matches = list(pattern.finditer(result))
+    """AI 결과를 요리 제목 단위로 분리해 각 레시피를 독립 카드로 표시한다.
+
+    기본 출력인 '## 🍳 요리명'뿐 아니라 번호·헤딩 깊이가 살짝 달라진
+    응답도 처리한다. 과거에 저장된 Markdown 문자열도 그대로 사용한다.
+    """
+    if not isinstance(result, str) or not result.strip():
+        return []
+
+    title_pattern = re.compile(
+        r"(?m)^\s{0,3}#{1,3}\s*(?:[0-9]+[.)]\s*)?🍳\s*(.+?)\s*$"
+    )
+    matches = list(title_pattern.finditer(result))
     if not matches:
-        return [("AI 추천 레시피", result)]
+        # AI가 헤딩 형식을 지키지 않은 경우에도 결과를 잃지 않도록 한 카드에 표시.
+        return [("AI 추천 레시피", result.strip())]
+
     recipes = []
     for i, match in enumerate(matches):
+        start = match.start()
         stop = matches[i + 1].start() if i + 1 < len(matches) else len(result)
-        body = result[match.start():stop].strip()
-        # 마지막 요리 아래 붙는 전체 요약은 개별 카드에 포함하지 않음
-        body = re.split(r"(?m)^##\s*(?:🏆|🧠)", body)[0].strip()
+        body = result[start:stop].strip()
+        # 예전 생성 결과에 남아 있을 수 있는 전체 요약은 개별 카드에서 제외.
+        body = re.split(r"(?m)^\s{0,3}##\s*(?:🏆|🧠)", body, maxsplit=1)[0].strip()
+        body = re.sub(r"(?m)^\s*-{3,}\s*$", "", body).strip()
         if body:
             recipes.append((match.group(1).strip(), body))
-    return recipes or [("AI 추천 레시피", result)]
+    return recipes or [("AI 추천 레시피", result.strip())]
+
+
+def recipe_card_body(content):
+    """각 카드 바깥에 제목을 표시하므로 본문에서는 같은 제목만 제거한다."""
+    lines = content.strip().splitlines()
+    if lines and re.match(
+        r"^\s{0,3}#{1,3}\s*(?:[0-9]+[.)]\s*)?🍳\s+", lines[0]
+    ):
+        return "\n".join(lines[1:]).strip()
+    return content.strip()
 
 
 # =====================================================
@@ -2012,15 +2037,22 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
         if st.session_state.get("recipe_results"):
             st.divider()
             st.subheader("🍽️ 오늘의 냉장고 파먹기 레시피")
-            st.markdown(st.session_state.recipe_results)
+            st.caption("요리별로 구분해서 볼 수 있어. 원하는 레시피는 카드 아래에서 바로 저장해 줘.")
 
-            st.subheader("💚 마음에 드는 요리 저장")
-            for idx, (title, content) in enumerate(
-                individual_recipes(st.session_state.recipe_results)
-            ):
+            # 한 번에 긴 Markdown을 출력하지 않고 요리별로 독립된 카드로 렌더링.
+            recipe_cards = individual_recipes(st.session_state.recipe_results)
+            for idx, (title, content) in enumerate(recipe_cards, start=1):
                 with st.container(border=True):
-                    st.write(f"**{title}**")
-                    if st.button("이 요리를 나의 요리책에 저장", key=f"save_piece_{idx}"):
+                    st.caption(f"RECIPE {idx:02d} / {len(recipe_cards):02d}")
+                    st.markdown(f"### 🍳 {title}")
+                    st.divider()
+                    st.markdown(recipe_card_body(content))
+                    st.divider()
+                    if st.button(
+                        "💚 이 레시피 요리책에 저장",
+                        key=f"save_piece_{idx-1}",
+                        use_container_width=True,
+                    ):
                         if any(
                             r.get("content") == content
                             for r in st.session_state.saved_recipes
@@ -2034,6 +2066,9 @@ elif st.session_state.selected_menu == "냉장고 파먹기":
                                 "created_at": date.today().isoformat()
                             })
                             save_and_refresh()
+                # 카드 바깥에도 구분선을 두어 연속된 요리를 확실히 분리.
+                if idx < len(recipe_cards):
+                    st.divider()
 
             st.caption(
                 "AI가 제안한 조리법은 참고용이야. 알레르기, 식품 상태, "
